@@ -8,7 +8,7 @@ use uefi::proto::console::text::Key;
 use uefi_input2::simple_text_input_ex::{
     RawKeyData, KeyState
 };
-use uefi_input2::input::KeyData;
+use uefi_input2::key_data::KeyData;
 
 // Callback function for key notification
 extern "efiapi" fn on_key_notify(_key_data: *mut RawKeyData) -> Status {

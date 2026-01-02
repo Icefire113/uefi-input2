@@ -58,6 +58,7 @@
 
 pub mod simple_text_input_ex;
 pub mod input;
+pub mod key_data;
 
 use uefi::boot::{get_handle_for_protocol, open_protocol_exclusive};
 use uefi::Result;

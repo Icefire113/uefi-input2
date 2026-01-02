@@ -4,59 +4,9 @@ use uefi::{Char16, Event, Result, StatusExt};
 use uefi::proto::console::text::{Key};
 use uefi::proto::unsafe_protocol;
 use uefi_raw::Status;
+use crate::key_data::KeyData;
 use crate::simple_text_input_ex::{KeyNotifyFunction, KeyState, KeyToggleState,
                                   RawKeyData, SimpleTextInputExProtocol, Boolean, InputKey};
-
-/// height-level key data wrapper
-#[derive(Debug, Copy, Clone)]
-pub struct KeyData {
-    pub key: Key,
-    pub key_state: KeyState,
-}
-
-/// reverse conversion to C struct
-impl From<KeyData> for RawKeyData {
-    fn from(value: KeyData) -> Self {
-        let input_key = match value.key {
-            Key::Printable(c) => InputKey {
-                scan_code: 0,
-                unicode_char: u16::from(c),
-            },
-            Key::Special(code) => InputKey {
-                scan_code: code.0,
-                unicode_char: 0,
-            },
-        };
-
-        Self {
-            key: input_key,
-            key_state: value.key_state,
-        }
-    }
-}
-
-/// forward conversion to Rust struct
-impl From<RawKeyData> for KeyData {
-    fn from(raw: RawKeyData) -> Self {
-        Self {
-            key: Key::from(raw.key),
-            // TODO: add new type enum for key state
-            key_state: raw.key_state,
-        }
-    }
-}
-
-impl KeyData {
-    /// Create key data from char
-    pub fn new(c: char) -> Result<Self> {
-        let c = Char16::try_from(c).map_err(|_| Status::INVALID_PARAMETER)?;
-
-        Ok(Self {
-            key: Key::Printable(c),
-            key_state: KeyState::default(),
-        })
-    }
-}
 
 /// safety wrapper for SimpleTextInputExProtocol
 #[derive(Debug)]
