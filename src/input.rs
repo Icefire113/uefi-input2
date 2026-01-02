@@ -50,7 +50,7 @@ impl KeyData {
     /// Create key data from char
     pub fn new(c: char) -> Result<Self> {
         let c = Char16::try_from(c).map_err(|_| Status::INVALID_PARAMETER)?;
-        
+
         Ok(Self {
             key: Key::Printable(c),
             key_state: KeyState::default(),
@@ -148,9 +148,42 @@ impl Input {
                 })
         }
     }
+
+    /// Register a callback function to be invoked when a key is pressed.
+    /// (need manual unregister)
+    pub unsafe fn register_key_notify(
+        &mut self,
+        key_data: &KeyData,
+        notification_function: KeyNotifyFunction,
+    ) -> Result<ManualKeyNotifyHandle> {
+        let this = addr_of_mut!(self.0);
+        let mut handle = core::ptr::null_mut();
+        let mut raw_data = RawKeyData::from(*key_data);
+
+        unsafe {
+            ((*this).register_key_notify)(
+                this,
+                &mut raw_data,
+                notification_function,
+                &mut handle,
+            )
+                .to_result_with_val(|| ManualKeyNotifyHandle { handle })
+        }
+    }
+
+    /// Unregister a callback function
+    pub unsafe fn unregister_key_notify(
+        &mut self,
+        handle: ManualKeyNotifyHandle,
+    ) -> Result<()> {
+        let this = addr_of_mut!(self.0);
+        unsafe {
+            ((*this).unregister_key_notify)(this, handle.handle).to_result()
+        }
+    }
 }
 
-/// Keyboard notification handle
+/// Keyboard notification handle(RAII)
 pub struct KeyNotifyHandle<'a> {
     /// Referencing the original agreement ensures that the agreement remains valid upon cancellation.
     proto: &'a mut SimpleTextInputExProtocol,
@@ -159,7 +192,7 @@ pub struct KeyNotifyHandle<'a> {
 }
 
 impl Drop for KeyNotifyHandle<'_> {
-    /// Automatically unregister the handle when the user no longer needs it 
+    /// Automatically unregister the handle when the user no longer needs it
     /// (e.g. when the variable goes out of scope).
     fn drop(&mut self) {
         let this = addr_of_mut!(*self.proto);
@@ -167,4 +200,9 @@ impl Drop for KeyNotifyHandle<'_> {
             let _ = ((*this).unregister_key_notify)(this, self.handle);
         }
     }
+}
+
+/// unsafe Keyboard notification handle
+pub struct ManualKeyNotifyHandle {
+    pub handle: *mut c_void,
 }
