@@ -1,12 +1,10 @@
 use core::ffi::c_void;
 use core::ptr::addr_of_mut;
-use uefi::{Char16, Event, Result, StatusExt};
-use uefi::proto::console::text::{Key};
+use uefi::{Event, Result, StatusExt};
 use uefi::proto::unsafe_protocol;
-use uefi_raw::Status;
 use crate::key_data::KeyData;
-use crate::simple_text_input_ex::{KeyNotifyFunction, KeyState, KeyToggleState,
-                                  RawKeyData, SimpleTextInputExProtocol, Boolean, InputKey};
+use crate::simple_text_input_ex::{KeyNotifyFunction, KeyToggleState,
+                                  RawKeyData, SimpleTextInputExProtocol, Boolean};
 
 /// safety wrapper for SimpleTextInputExProtocol
 #[derive(Debug)]
@@ -16,6 +14,7 @@ pub struct Input(SimpleTextInputExProtocol);
 
 impl Input {
     /// clear keyboard cache
+    #[inline]
     pub fn reset(&mut self, extended_verification: bool) -> Result {
         let this = addr_of_mut!(self.0);
         unsafe {
@@ -24,6 +23,7 @@ impl Input {
     }
 
     /// non-blocking keyboard read
+    #[inline]
     pub fn read_key_stroke_ex(&mut self) -> Option<KeyData> {
         let mut raw = RawKeyData::default();
         let this = addr_of_mut!(self.0);
@@ -41,10 +41,13 @@ impl Input {
     ///
     /// This allows the caller to wait for input without polling in a busy loop,
     /// or to use it in `wait_for_event` along with other events (like timers).
+    #[inline]
     pub fn wait_for_key_event(&self) -> Option<Event> {
         unsafe { Event::from_ptr(self.0.wait_for_key_ex) }
     }
 
+    /// only set toggle state
+    #[inline]
     pub fn set_state(&mut self, mut state: KeyToggleState) -> Result {
         let this = addr_of_mut!(self.0);
         unsafe {
