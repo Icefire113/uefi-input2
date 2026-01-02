@@ -50,7 +50,7 @@ fn main() -> Status {
         println!("4. notification automatic dropped.");
         {
             // 4. Register notification in a scope
-            match input.on_key_notify(&trigger_key, on_key_notify) {
+            match input.on_key_callback(&trigger_key, on_key_notify) {
                 Ok(_handle) => {
                     println!("   Notification registered for 'c'.");
                     println!("   (Notification handle will be dropped now to allow input loop)");
