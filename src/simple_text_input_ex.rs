@@ -1,3 +1,9 @@
+// Copyright (c) Bemly, January 2026
+// You may copy and distribute this file freely.  Any queries and
+// complaints should be forwarded to bemly_@petalmail.com.
+// If you make any changes to this file, please do not distribute
+// the results under the name `bemly'.
+
 use core::ffi::c_void;
 pub use uefi_raw::Boolean;
 use uefi_raw::{guid, Event, Guid, Status};

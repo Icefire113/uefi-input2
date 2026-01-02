@@ -1,3 +1,9 @@
+// Copyright (c) Bemly, January 2026
+// You may copy and distribute this file freely.  Any queries and
+// complaints should be forwarded to bemly_@petalmail.com.
+// If you make any changes to this file, please do not distribute
+// the results under the name `bemly'.
+
 use uefi::{Char16, Status};
 use uefi::proto::console::text::Key;
 use uefi_raw::protocol::console::InputKey;
@@ -36,7 +42,6 @@ impl From<RawKeyData> for KeyData {
     fn from(raw: RawKeyData) -> Self {
         Self {
             key: Key::from(raw.key),
-            // TODO: add new type enum for key state
             key_state: raw.key_state,
         }
     }

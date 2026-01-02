@@ -1,5 +1,12 @@
 UEFI Simple Text Input Ex Protocol Wrapper
 ==============================================
+[![CI](https://github.com/Bemly/uefi-input2/workflows/CI/badge.svg)](https://github.com/Bemly/uefi-input2/actions/workflows/ci.yml)
+[![Docs.rs](https://docs.rs/uefi-input2/badge.svg)](https://docs.rs/uefi-input2)
+[![Crates.io](https://img.shields.io/crates/v/uefi-input2.svg)](https://crates.io/crates/uefi-input2)
+[![License: Zed](https://img.shields.io/badge/License-Zed-yellow.svg)](https://spdx.org/licenses/Zed.html)
+[![Rust](https://img.shields.io/badge/rust-2024%20edtion-blue.svg)](https://www.rust-lang.org)
+[![UEFI](https://img.shields.io/badge/target-*--unknown--uefi-orange.svg)](https://doc.rust-lang.org/nightly/rustc/platform-support/unknown-uefi.html)
+
 This library provides a safe, idiomatic Rust wrapper for the `EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL`.
 Unlike the standard `SimpleTextInput`, this protocol allows for advanced key tracking,
 including shift state (Ctrl, Alt, Shift) and toggle state (Caps Lock, Num Lock).

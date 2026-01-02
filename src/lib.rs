@@ -51,11 +51,19 @@
 //!     Status::SUCCESS
 //! }
 //! ```
+// Copyright (c) Bemly, January 2026
+// You may copy and distribute this file freely.  Any queries and
+// complaints should be forwarded to bemly_@petalmail.com.
+// If you make any changes to this file, please do not distribute
+// the results under the name `bemly'.
 
 #![no_std]
 
+/// C FFI Binding
 pub mod simple_text_input_ex;
+/// simple_text_input_ex wrapper
 pub mod input;
+/// height-level data wrapper
 pub mod key_data;
 
 use uefi::boot::{get_handle_for_protocol, open_protocol_exclusive};
