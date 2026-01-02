@@ -4,7 +4,7 @@
 //! Unlike the standard `SimpleTextInput`, this protocol allows for advanced key tracking,
 //! including shift state (Ctrl, Alt, Shift) and toggle state (Caps Lock, Num Lock).
 //!
-//! ## Features
+//! ## Purpose
 //! - **Seamless Migration**: Designed as a **drop-in, painless replacement**
 //!     for the standard `uefi::system::with_stdin`.
 //! - **Safe Resource Management**: Uses the `with_stdin` pattern to ensure the protocol is opened
@@ -12,7 +12,11 @@
 //! - **Extended Key Data**: Access to `KeyShiftState` and `KeyToggleState`.
 //! - **No-Std Compatible**: Designed specifically for UEFI environments.
 //!
-//! ## Usage
+//! ## Feature List
+//! - **alloc**: Enables `Vec` support. For example, `with_stdins` requires
+//!     the `alloc` feature to collect multiple input handles via `find_handles`.
+//!
+//! ## Minimal Example
 //! Simply replace your import and use the same closure-based pattern:
 //!
 //! ```rust,no_run
@@ -58,6 +62,7 @@
 // the results under the name `bemly'.
 
 #![no_std]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 /// C FFI Binding
 pub mod simple_text_input_ex;
@@ -66,17 +71,52 @@ pub mod input;
 /// height-level data wrapper
 pub mod key_data;
 
-use uefi::boot::{get_handle_for_protocol, open_protocol_exclusive};
+use uefi::boot::{get_handle_for_protocol, open_protocol_exclusive, ScopedProtocol};
 use uefi::Result;
 use crate::input::Input;
 
 /// it has roughly the same function as `uefi::system::with_stdin`.
+/// only support single keyboard.
 pub fn with_stdin<F, R>(mut f: F) -> Result<R>
 where
-    F: FnMut(&mut Input) -> Result<R>
+    F: FnMut(&mut ScopedProtocol<Input>) -> Result<R>
 {
     let input = get_handle_for_protocol::<Input>()?;
     let mut input = open_protocol_exclusive::<Input>(input)?;
 
-    f(&mut *input)
+    f(&mut input)
+}
+
+#[cfg(feature = "alloc")]
+extern crate alloc;
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
+
+/// support multiple keyboard. (require `alloc` feature)
+///
+/// #### Usage
+/// ```rust,no_run
+/// uefi_input2::with_stdins(|stdins| {
+///     loop {
+///         for keyboard in stdins.iter_mut() {
+///             if let Some(key_data) = keyboard.read_key_stroke_ex() { /* just do it! */ }
+///         }
+///     }
+///  }).unwarp();
+/// ```
+#[cfg(feature = "alloc")]
+pub fn with_stdins<F, R>(mut f: F) -> Result<R>
+where
+    F: FnMut(&mut Vec<ScopedProtocol<Input>>) -> Result<R>
+{
+    use uefi::boot::find_handles;
+
+    let inputs = find_handles::<Input>().expect("Failed to find input protocol");
+    let mut keyboards: Vec<ScopedProtocol<Input>> = Vec::with_capacity(inputs.len());
+    for input in inputs {
+        let keyboard = open_protocol_exclusive::<Input>(input).expect("Failed to open keyboard protocol");
+        keyboards.push(keyboard);
+    }
+
+    f(&mut keyboards)
 }

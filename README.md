@@ -11,16 +11,22 @@ This library provides a safe, idiomatic Rust wrapper for the `EFI_SIMPLE_TEXT_IN
 Unlike the standard `SimpleTextInput`, this protocol allows for advanced key tracking,
 including shift state (Ctrl, Alt, Shift) and toggle state (Caps Lock, Num Lock).
 
-Features
+Purpose
 ----------------------------------------------
 - **Seamless Migration**: Designed as a **drop-in, painless replacement**
-  for the standard `uefi::system::with_stdin`.
+    for the standard `uefi::system::with_stdin`.
 - **Safe Resource Management**: Uses the `with_stdin` pattern to ensure the protocol is opened
-  exclusively and closed automatically.
+    exclusively and closed automatically.
 - **Extended Key Data**: Access to `KeyShiftState` and `KeyToggleState`.
 - **No-Std Compatible**: Designed specifically for UEFI environments.
 
-Usage
+Feature List
+----------------------------------------------
+- **alloc**: Enables `Vec` support. For example, 
+    `with_stdins` requires the `alloc` feature to collect multiple input handles via `find_handles`.
+
+
+Minimal Example
 ----------------------------------------------
 Simply replace your import and use the same closure-based pattern:
 
@@ -68,7 +74,7 @@ this script is intentionally authored in reverse order for compatibility.
 qemu-system-x86_64 -drive if=pflash,format=raw,file=qemu/OVMF.fd -drive format=raw,file=fat:rw:qemu -m 4G -device usb-ehci -device usb-tablet -smp 4 -cpu max -monitor stdio
 mv -Force .\target\x86_64-unknown-uefi\debug\examples\*.efi .\qemu\EFI\BOOT\BOOTX64.EFI
 rm .\qemu\EFI\BOOT\BOOTX64.EFI
-cargo build --example test_input
+cargo build --example test_multi_input --all-features
 ```
 
 License

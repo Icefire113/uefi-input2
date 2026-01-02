@@ -3,7 +3,7 @@ name = "uefi-input2"
 authors = ["Bemly <bemly_@petalmail.com>"]
 categories = ["embedded", "no-std", "api-bindings"]
 keywords = ["uefi", "efi"]
-version = "36.1.4"
+version = "36.1.5"
 edition = "2024"
 license = "Zed"
 readme = "README.md"
@@ -17,6 +17,12 @@ uefi-raw = "0.13.0"
 [dev-dependencies]
 uefi = { version = "0.36.1", features = ["logger", "alloc", "global_allocator", "panic_handler"] }
 
+[features]
+default = []
+alloc = ["uefi/alloc"]
+
 [package.metadata.docs.rs]
 default-target = "x86_64-unknown-uefi"
 targets = ["aarch64-unknown-uefi", "i686-unknown-uefi", "x86_64-unknown-uefi"]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
