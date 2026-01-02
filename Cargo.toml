@@ -1,12 +1,14 @@
 [package]
 name = "uefi-input2"
-authors = ["Bemly"]
+authors = ["Bemly <bemly_@petalmail.com>"]
 categories = ["embedded", "no-std", "api-bindings"]
 keywords = ["uefi", "efi"]
-version = "1.0.0"
+version = "36.1.1"
 edition = "2024"
 license = "GPL-3"
 rust-version = "1.85.1"
+readme = "README.md"
+repository = "https://github.com/Bemly/uefi-input2"
 
 [dependencies]
 uefi = "0.36.1"

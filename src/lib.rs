@@ -63,6 +63,7 @@ use uefi::boot::{get_handle_for_protocol, open_protocol_exclusive};
 use uefi::Result;
 use crate::input::Input;
 
+/// it has roughly the same function as `uefi::system::with_stdin`.
 pub fn with_stdin<F, R>(mut f: F) -> uefi::Result<R>
 where
     F: FnMut(&mut Input) -> Result<R>

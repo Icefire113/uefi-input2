@@ -15,7 +15,7 @@ pub struct KeyState {
     pub key_toggle_state: KeyToggleState,
 }
 
-/// Complete key data structure
+/// C FFI key data structure
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct RawKeyData {
@@ -23,8 +23,8 @@ pub struct RawKeyData {
     pub key_state: KeyState,
 }
 
-/// Protocol constant definition
-/// Key combination status mask
+// Protocol constant definition
+// Key combination status mask
 pub const SHIFT_STATE_VALID: u32     = 0x8000_0000;
 pub const RIGHT_SHIFT_PRESSED: u32   = 0x0000_0001;
 pub const LEFT_SHIFT_PRESSED: u32    = 0x0000_0002;
@@ -37,19 +37,19 @@ pub const LEFT_LOGO_PRESSED: u32     = 0x0000_0080;
 pub const MENU_KEY_PRESSED: u32      = 0x0000_0100;
 pub const SYS_REQ_PRESSED: u32       = 0x0000_0200;
 
-/// Toggle state mask
+// Toggle state mask
 pub const TOGGLE_STATE_VALID: u8     = 0x80;
 pub const KEY_STATE_EXPOSED: u8      = 0x40;
 pub const SCROLL_LOCK_ACTIVE: u8     = 0x01;
 pub const NUM_LOCK_ACTIVE: u8        = 0x02;
 pub const CAPS_LOCK_ACTIVE: u8       = 0x04;
 
-/// Protocol interface definition
+// Protocol interface definition
 /// Key notification callback function type
 pub type KeyNotifyFunction = unsafe extern "efiapi" fn(key_data: *mut RawKeyData) -> Status;
 
-/// EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL
-/// Extended input protocol that allows obtaining modifier key (Shift/Alt/Ctrl) states.
+/// EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL:
+/// allows obtaining modifier key (Shift/Alt/Ctrl) states.
 #[derive(Debug)]
 #[repr(C)]
 pub struct SimpleTextInputExProtocol {

@@ -3,11 +3,13 @@ use uefi::proto::console::text::Key;
 use uefi::proto::unsafe_protocol;
 use crate::simple_text_input_ex::{KeyState, RawKeyData, SimpleTextInputExProtocol};
 
+/// safety wrapper for SimpleTextInputExProtocol
 #[derive(Debug)]
 #[repr(transparent)]
 #[unsafe_protocol(SimpleTextInputExProtocol::GUID)]
 pub struct Input(SimpleTextInputExProtocol);
 
+/// height-level key data wrapper
 #[derive(Debug, Copy, Clone)]
 pub struct KeyData {
     pub key: Key,
@@ -15,6 +17,7 @@ pub struct KeyData {
 }
 
 impl Input {
+    /// non-blocking keyboard read
     pub fn read_key_stroke_ex(&mut self) -> Option<KeyData> {
         let mut raw = RawKeyData::default();
         let this = addr_of_mut!(self.0);
