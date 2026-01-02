@@ -9,6 +9,7 @@ license = "GPL-3"
 rust-version = "1.85.1"
 readme = "README.md"
 repository = "https://github.com/Bemly/uefi-input2"
+description = "rusty wrapper for EFI SIMPLE TEXT INPUT EXTEND PROTOCOL, support shift&toggle state and advanced key events."
 
 [dependencies]
 uefi = "0.36.1"
