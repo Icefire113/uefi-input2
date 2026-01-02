@@ -1,5 +1,6 @@
 use core::ffi::c_void;
-use uefi_raw::{guid, Boolean, Event, Guid, Status};
+use uefi::{guid, Event, Guid, Status};
+use uefi_raw::Boolean;
 use uefi_raw::protocol::console::InputKey;
 
 pub type KeyToggleState = u8;
@@ -17,7 +18,7 @@ pub struct KeyState {
 /// Complete key data structure
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]
-pub struct KeyData {
+pub struct RawKeyData {
     pub key: InputKey,
     pub key_state: KeyState,
 }
@@ -45,7 +46,7 @@ pub const CAPS_LOCK_ACTIVE: u8       = 0x04;
 
 /// Protocol interface definition
 /// Key notification callback function type
-pub type KeyNotifyFunction = unsafe extern "efiapi" fn(key_data: *mut KeyData) -> Status;
+pub type KeyNotifyFunction = unsafe extern "efiapi" fn(key_data: *mut RawKeyData) -> Status;
 
 /// EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL
 /// Extended input protocol that allows obtaining modifier key (Shift/Alt/Ctrl) states.
@@ -56,7 +57,7 @@ pub struct SimpleTextInputExProtocol {
     pub reset: unsafe extern "efiapi" fn(this: *mut Self, extended_verification: Boolean) -> Status,
 
     /// Reads key data (including KeyState).
-    pub read_key_stroke_ex: unsafe extern "efiapi" fn(this: *mut Self, key_data: *mut KeyData) -> Status,
+    pub read_key_stroke_ex: unsafe extern "efiapi" fn(this: *mut Self, key_data: *mut RawKeyData) -> Status,
 
     /// Event for waiting for a key press.
     pub wait_for_key_ex: Event,
@@ -67,7 +68,7 @@ pub struct SimpleTextInputExProtocol {
     /// Registers a key notification function, triggered when a specific key is pressed.
     pub register_key_notify: unsafe extern "efiapi" fn(
         this: *mut Self,
-        key_data: *mut KeyData,
+        key_data: *mut RawKeyData,
         key_notification_function: KeyNotifyFunction,
         notify_handle: *mut *mut c_void,
     ) -> Status,
