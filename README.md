@@ -69,4 +69,4 @@ cargo build --example test_input
 
 License
 ----------------------------------------------
-This project is licensed under the GPL-3 License.
+This project is licensed under the Zed License.
