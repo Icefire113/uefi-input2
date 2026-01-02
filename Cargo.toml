@@ -17,3 +17,7 @@ uefi-raw = "0.13.0"
 
 [dev-dependencies]
 uefi = { version = "0.36.1", features = ["logger", "alloc", "global_allocator", "panic_handler"] }
+
+[package.metadata.docs.rs]
+default-target = "x86_64-unknown-uefi"
+targets = ["aarch64-unknown-uefi", "i686-unknown-uefi", "x86_64-unknown-uefi"]

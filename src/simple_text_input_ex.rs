@@ -1,7 +1,7 @@
 use core::ffi::c_void;
-use uefi::{guid, Event, Guid, Status};
-use uefi_raw::Boolean;
-use uefi_raw::protocol::console::InputKey;
+pub use uefi_raw::Boolean;
+use uefi_raw::{guid, Event, Guid, Status};
+pub use uefi_raw::protocol::console::InputKey;
 
 pub type KeyToggleState = u8;
 /// Keyboard states:
