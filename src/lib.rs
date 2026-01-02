@@ -14,8 +14,14 @@
 //!
 //! ## Usage
 //! Simply replace your import and use the same closure-based pattern:
-//! 
-//! ```rust
+//!
+//! ```rust,no_run
+//! #![no_main]
+//! #![no_std]
+//! use uefi::prelude::*;
+//! use uefi::{print, println};
+//! use uefi::proto::console::text::Key::{Printable, Special};
+//! use uefi::proto::console::text::ScanCode;
 //! use uefi_input2::with_stdin;
 //! use uefi_input2::simple_text_input_ex::{LEFT_SHIFT_PRESSED, RIGHT_SHIFT_PRESSED};
 //!
@@ -28,13 +34,17 @@
 //!             if let Some(data) = input.read_key_stroke_ex() {
 //!                 // Check if any Shift key is held
 //!                 let is_shift = data.key_state.key_shift_state & (LEFT_SHIFT_PRESSED | RIGHT_SHIFT_PRESSED) != 0;
-//!                 
-//!                 if is_shift {
-//!                     uefi::println!("Shift is being held!");
-//!                 }
+//!                 if is_shift { println!("Shift is being held!") }
 //!
-//!                 // Exit on ESC (Scan Code 0x17)
-//!                 if data.key.scan_code == 0x17 { break; }
+//!                 match data.key {
+//!                    Printable(c) if u16::from(c) == 0x0D => print!("\r\n"),
+//!                    Printable(c) => print!("{}", c),
+//!                    Special(code) if code == ScanCode::ESCAPE => {
+//!                        println!("Exiting...");
+//!                        return Ok(())
+//!                    },
+//!                    _ => {}
+//!                }
 //!             }
 //!         }
 //!         Ok(())
@@ -46,12 +56,12 @@
 
 #![no_std]
 
+pub mod simple_text_input_ex;
+pub mod input;
+
 use uefi::boot::{get_handle_for_protocol, open_protocol_exclusive};
 use uefi::Result;
 use crate::input::Input;
-
-pub mod simple_text_input_ex;
-pub mod input;
 
 pub fn with_stdin<F, R>(mut f: F) -> uefi::Result<R>
 where

@@ -34,8 +34,6 @@ fn main() -> Status {
                     }
                 }
 
-                print!("{:?}", key_data);
-
                 match key {
                     Printable(c) if u16::from(c) == 0x0D => print!("\r\n"),
                     Printable(c) => print!("{}", c),
