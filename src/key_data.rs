@@ -54,82 +54,106 @@ impl KeyData {
     }
 
     #[inline(always)]
-    pub fn shift_state_valid(&self) -> bool {
+    pub fn function_enable(&self) -> bool {
         (self.key_state.key_shift_state & SHIFT_STATE_VALID) != 0
     }
 
     #[inline(always)]
-    pub fn right_shift_pressed(&self) -> bool {
+    pub fn r_shift(&self) -> bool {
         (self.key_state.key_shift_state & RIGHT_SHIFT_PRESSED) != 0
     }
 
     #[inline(always)]
-    pub fn left_shift_pressed(&self) -> bool {
+    pub fn l_shift(&self) -> bool {
         (self.key_state.key_shift_state & LEFT_SHIFT_PRESSED) != 0
     }
 
     #[inline(always)]
-    pub fn right_control_pressed(&self) -> bool {
+     pub fn shift(&self) -> bool {
+        const SHIFT_MASK: u32 = LEFT_SHIFT_PRESSED | RIGHT_SHIFT_PRESSED;
+        (self.key_state.key_shift_state & SHIFT_MASK) != 0
+    }
+
+    #[inline(always)]
+    pub fn r_ctrl(&self) -> bool {
         (self.key_state.key_shift_state & RIGHT_CONTROL_PRESSED) != 0
     }
 
     #[inline(always)]
-    pub fn left_control_pressed(&self) -> bool {
+    pub fn l_ctrl(&self) -> bool {
         (self.key_state.key_shift_state & LEFT_CONTROL_PRESSED) != 0
     }
 
     #[inline(always)]
-    pub fn right_alt_pressed(&self) -> bool {
+    pub fn ctrl(&self) -> bool {
+        const CTRL_MASK: u32 = LEFT_CONTROL_PRESSED | RIGHT_CONTROL_PRESSED;
+        (self.key_state.key_shift_state & CTRL_MASK) != 0
+    }
+
+    #[inline(always)]
+    pub fn r_alt(&self) -> bool {
         (self.key_state.key_shift_state & RIGHT_ALT_PRESSED) != 0
     }
 
     #[inline(always)]
-    pub fn left_alt_pressed(&self) -> bool {
+    pub fn l_alt(&self) -> bool {
         (self.key_state.key_shift_state & LEFT_ALT_PRESSED) != 0
     }
 
     #[inline(always)]
-    pub fn right_logo_pressed(&self) -> bool {
+    pub fn alt(&self) -> bool {
+        const ALT_MASK: u32 = LEFT_ALT_PRESSED | RIGHT_ALT_PRESSED;
+        (self.key_state.key_shift_state & ALT_MASK) != 0
+    }
+
+    #[inline(always)]
+    pub fn r_logo(&self) -> bool {
         (self.key_state.key_shift_state & RIGHT_LOGO_PRESSED) != 0
     }
 
     #[inline(always)]
-    pub fn left_logo_pressed(&self) -> bool {
+    pub fn l_logo(&self) -> bool {
         (self.key_state.key_shift_state & LEFT_LOGO_PRESSED) != 0
     }
 
     #[inline(always)]
-    pub fn menu_key_pressed(&self) -> bool {
+    pub fn logo(&self) -> bool {
+        const LOGO_MASK: u32 = LEFT_LOGO_PRESSED | RIGHT_LOGO_PRESSED;
+        (self.key_state.key_shift_state & LOGO_MASK) != 0
+    }
+
+    #[inline(always)]
+    pub fn menu(&self) -> bool {
         (self.key_state.key_shift_state & MENU_KEY_PRESSED) != 0
     }
 
     #[inline(always)]
-    pub fn sys_req_pressed(&self) -> bool {
+    pub fn sys_req(&self) -> bool {
         (self.key_state.key_shift_state & SYS_REQ_PRESSED) != 0
     }
 
     #[inline(always)]
-    pub fn toggle_state_valid(&self) -> bool {
+    pub fn toggle_enable(&self) -> bool {
         (self.key_state.key_toggle_state & TOGGLE_STATE_VALID) != 0
     }
 
     #[inline(always)]
-    pub fn key_state_exposed(&self) -> bool {
+    pub fn is_realtime(&self) -> bool {
         (self.key_state.key_toggle_state & KEY_STATE_EXPOSED) != 0
     }
 
     #[inline(always)]
-    pub fn scroll_lock_active(&self) -> bool {
+    pub fn scroll_lock(&self) -> bool {
         (self.key_state.key_toggle_state & SCROLL_LOCK_ACTIVE) != 0
     }
 
     #[inline(always)]
-    pub fn num_lock_active(&self) -> bool {
+    pub fn num_lock(&self) -> bool {
         (self.key_state.key_toggle_state & NUM_LOCK_ACTIVE) != 0
     }
 
     #[inline(always)]
-    pub fn caps_lock_active(&self) -> bool {
+    pub fn caps_lock(&self) -> bool {
         (self.key_state.key_toggle_state & CAPS_LOCK_ACTIVE) != 0
     }
 }

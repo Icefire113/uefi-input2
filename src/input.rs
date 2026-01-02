@@ -119,8 +119,7 @@ impl Input {
                 &mut raw_data,
                 notification_function,
                 &mut handle,
-            )
-                .to_result_with_val(|| ManualKeyNotifyHandle { handle })
+            ).to_result_with_val(|| handle)
         }
     }
 
@@ -128,10 +127,10 @@ impl Input {
     pub unsafe fn unregister_key_notify(
         &mut self,
         handle: ManualKeyNotifyHandle,
-    ) -> Result<()> {
+    ) -> Result {
         let this = addr_of_mut!(self.0);
         unsafe {
-            ((*this).unregister_key_notify)(this, handle.handle).to_result()
+            ((*this).unregister_key_notify)(this, handle).to_result()
         }
     }
 }
@@ -156,6 +155,4 @@ impl Drop for KeyNotifyHandle<'_> {
 }
 
 /// unsafe Keyboard notification handle
-pub struct ManualKeyNotifyHandle {
-    pub handle: *mut c_void,
-}
+pub type ManualKeyNotifyHandle = *mut c_void;

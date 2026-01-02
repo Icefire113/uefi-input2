@@ -34,10 +34,7 @@ fn main() -> Status {
     with_stdin(|input| {
         loop {
             if let Some(data) = input.read_key_stroke_ex() {
-                // Check if any Shift key is held
-                let is_shift = data.key_state.key_shift_state & (LEFT_SHIFT_PRESSED | RIGHT_SHIFT_PRESSED) != 0;
-                if is_shift { println!("Shift is being held!") }
-
+                if data.shift() { println!("Shift is being held!") }
                 match data.key {
                    Printable(c) if u16::from(c) == 0x0D => print!("\r\n"),
                    Printable(c) => print!("{}", c),
@@ -64,7 +61,7 @@ this script is intentionally authored in reverse order for compatibility.
 qemu-system-x86_64 -drive if=pflash,format=raw,file=qemu/OVMF.fd -drive format=raw,file=fat:rw:qemu -m 4G -device usb-ehci -device usb-tablet -smp 4 -cpu max -monitor stdio
 mv -Force .\target\x86_64-unknown-uefi\debug\examples\*.efi .\qemu\EFI\BOOT\BOOTX64.EFI
 rm .\qemu\EFI\BOOT\BOOTX64.EFI
-cargo build --example test_input_notification
+cargo build --example test_input
 ```
 
 License

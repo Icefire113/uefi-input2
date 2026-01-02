@@ -32,13 +32,11 @@
 //!     with_stdin(|input| {
 //!         loop {
 //!             if let Some(data) = input.read_key_stroke_ex() {
-//!                 // Check if any Shift key is held
-//!                 let is_shift = data.key_state.key_shift_state & (LEFT_SHIFT_PRESSED | RIGHT_SHIFT_PRESSED) != 0;
-//!                 if is_shift { println!("Shift is being held!") }
+//!                 if data.shift() { println!("Shift is being held!") }
 //!
 //!                 match data.key {
 //!                    Printable(c) if u16::from(c) == 0x0D => print!("\r\n"),
-//!                    Printable(c) => print!("{}", c),
+//!                    Printable(c) if u16::from(c) >= 0x20 => print!("{}", c),
 //!                    Special(code) if code == ScanCode::ESCAPE => {
 //!                        println!("Exiting...");
 //!                        return Ok(())
