@@ -111,10 +111,10 @@ where
 {
     use uefi::boot::find_handles;
 
-    let inputs = find_handles::<Input>().expect("Failed to find input protocol");
+    let inputs = find_handles::<Input>()?;
     let mut keyboards: Vec<ScopedProtocol<Input>> = Vec::with_capacity(inputs.len());
     for input in inputs {
-        let keyboard = open_protocol_exclusive::<Input>(input).expect("Failed to open keyboard protocol");
+        let keyboard = open_protocol_exclusive::<Input>(input)?;
         keyboards.push(keyboard);
     }
 
