@@ -12,7 +12,7 @@ use crate::input::Input;
 use crate::simple_text_input_ex::*;
 
 /// height-level key data wrapper
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct KeyData {
     pub key: Key,
     pub key_state: KeyState,

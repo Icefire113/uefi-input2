@@ -13,7 +13,7 @@ pub type KeyToggleState = u8;
 /// Keyboard states:
 /// including Shift/Alt/Ctrl states and Caps Lock flags.
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct KeyState {
     /// The bitmask here is determined using the SHIFT_STATE constant below.
     pub key_shift_state: u32,

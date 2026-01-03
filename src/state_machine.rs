@@ -1,204 +1,338 @@
+// Copyright (c) Bemly, January 2026
+// You may copy and distribute this file freely.  Any queries and
+// complaints should be forwarded to bemly_@petalmail.com.
+// If you make any changes to this file, please do not distribute
+// the results under the name `bemly'.
+
 extern crate alloc;
 use alloc::collections::VecDeque;
 use uefi::boot::{get_handle_for_protocol, open_protocol_exclusive, ScopedProtocol};
+use uefi::proto::console::text::Key::Printable;
 use uefi::Result;
+use uefi::data_types::chars::NUL_16;
 use crate::key_data::KeyData;
-use uefi::proto::console::text::Key;
 use uefi::proto::misc::Timestamp;
 
-#[derive(Debug, Clone, Copy)]
+/// Represents logical input events identified by the state machine.
+///
+/// Unlike raw hardware signals, `InputEvent` carries temporal and semantic meaning
+/// such as long presses and multi-click counts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InputEvent {
+
+    /// Triggered the exact moment a key is physically pressed down.
+    ///
+    /// **Timing**: Dispatched once when the state transitions from 'Idle/Cooldown' to 'Active'.
     Pressed(KeyData),
+
+    /// Triggered when a key is considered released.
+    ///
+    /// **Note**: This is emitted after the `release_timeout` has passed without
+    /// receiving further signals for this key, ensuring the release is intentional.
     Released(KeyData),
+
+    /// Triggered once when a key has been held down longer than the `long_press_delay` threshold.
+    ///
+    /// **Timing**: Occurs exactly once per press cycle, following a `Pressed` event.
     LongPressed(KeyData),
+
+    /// Dispatched continuously after a `LongPressed` event as long as the key remains held.
+    ///
+    /// **Throttling**: The state machine implements a coalescing mechanism. If a `Repeat`
+    /// for the same key is already pending in the queue, new ones are suppressed to
+    /// prevent input lag during heavy rendering (GOP) tasks.
     Repeat(KeyData),
-    Click(KeyData, u32),
+
+    /// Triggered upon key release if the press duration did not reach the "Long Press" threshold.
+    ///
+    /// **Fields**:
+    /// * `KeyData`: The metadata of the key.
+    /// * `u32`: The click sequence count (1 for single click, 2 for double click, etc.).
+    ///
+    /// **Timing**: Dispatched immediately after the `Released` event.
+    Click(KeyData, usize),
 }
 
-#[derive(Debug, Clone)]
+/// Represents the internal lifecycle stages of a key tracking operation.
+#[derive(Debug)]
 enum State {
+    /// No keys are currently being tracked. The system is waiting for an initial press.
     Idle,
-    // 正在被物理按下
+
+    /// A key is currently being physically held down.
+    ///
+    /// The state machine remains in this variant as long as the hardware continues
+    /// to report the key or until the `release_timeout` is reached.
     Active {
+        /// Metadata of the key being pressed.
         key: KeyData,
+        /// The timestamp (in hardware ticks) when the key was first pressed.
+        /// Used to calculate the `LongPressed` threshold.
         start_time: u64,
+        /// The timestamp of the most recent hardware signal received for this key.
+        /// Used as a "heartbeat" to detect when the user has released the key.
         last_seen_time: u64,
+        /// Flag indicating if the `LongPressed` event has already been dispatched
+        /// for the current press cycle. Prevents duplicate long-press triggers.
         long_press_triggered: bool,
-        next_repeat_time: u64,
-        click_count: u32, // 承接自上一次点击
+        /// The current click sequence number (e.g., 1 for single press, 2 for double).
+        /// This is carried over from a previous `Cooldown` state if the press
+        /// happened within the allowed window.
+        click_count: usize,
     },
-    // 物理已松开，等待可能的下一次点击以构成双击/多击
+
+    /// The key has been physically released, but the state machine is "waiting"
+    /// to see if the user will press it again to form a double or multi-click.
+    ///
+    /// If a new press occurs before `click_window` expires, it increments the count.
+    /// If the window expires, the state transitions back to `Idle`.
     Cooldown {
+        /// Metadata of the key that was just released.
         key: KeyData,
+        /// The timestamp when the key was officially considered released.
         release_time: u64,
-        click_count: u32,
+        /// The click count reached at the end of the last `Active` session.
+        click_count: usize,
     },
 }
 
+/// A high-level input state machine that transforms raw hardware signals into semantic events.
+///
+/// The `StateMachine` uses a frequency-aware hardware timestamp provider to distinguish
+/// between short presses, long presses, and multi-click sequences. It maintains an
+/// internal event queue to ensure logical event ordering (e.g., ensuring a `Released`
+/// event precedes a `Click` event).
 pub struct StateMachine {
+    /// The hardware timestamp protocol used to fetch high-resolution time ticks.
+    /// This is used to calculate durations for timeouts and delays.
     timestamp: ScopedProtocol<Timestamp>,
-    frequency: u64,
 
-    // 配置
-    release_timeout: u64,     // 判定抬手的阈值 (建议 100-150ms)
-    long_press_delay: u64,    // 触发长按的时间
-    click_window: u64,        // 连击等待窗口 (双击间隔)
-    repeat_delay: u64,        // 长按后的重复频率
+    /// The threshold duration used to determine if a key has been physically released.
+    /// Since UEFI might not provide an explicit "release" interrupt, the state machine
+    /// considers a key released if no signals are received within this window.
+    ///
+    /// Typical value: 150ms - 200ms.
+    release_timeout: u64,
+    /// The required duration of a continuous press before a `LongPressed` event is triggered.
+    /// After this threshold, the state machine will begin emitting `Repeat` events.
+    ///
+    /// Typical value: 500ms.
+    long_press_delay: u64,
+    /// The maximum time window between a key release and the next press to be
+    /// considered a multi-click (e.g., a double-click).
+    ///
+    /// Typical value: 250ms - 300ms.
+    click_window: u64,
 
+    /// The current internal tracking state (Idle, Active, or Cooldown).
     state: State,
+
+    /// A buffer of semantic events (e.g., Pressed, Click) waiting to be consumed
+    /// by the application's main loop.
     event_queue: VecDeque<InputEvent>,
-}
-
-fn key_eq(a: &KeyData, b: &KeyData) -> bool {
-    let key_match = match (a.key, b.key) {
-        (Key::Printable(c1), Key::Printable(c2)) => c1 == c2,
-        (Key::Special(s1), Key::Special(s2)) => s1 == s2,
-        _ => false,
-    };
-    if !key_match { return false; }
-
-    a.key_state.key_shift_state == b.key_state.key_shift_state &&
-    a.key_state.key_toggle_state == b.key_state.key_toggle_state
 }
 
 impl StateMachine {
 
+    /// Creates a new `StateMachine` instance by initializing the UEFI Timestamp protocol.
+    ///
+    /// #### Errors
+    /// Returns an error if the `Timestamp` protocol is unavailable or if exclusive
+    /// access cannot be granted (e.g., another driver is using it).
+    ///
+    /// #### Timing Calibration
+    /// The input thresholds are automatically calculated based on the hardware frequency:
+    /// * **Release Timeout**: 150-200ms. Used to detect key lift when hardware signals stop.
+    /// * **Long Press Delay**: 500ms. The duration before a hold is considered a long press.
+    /// * **Click Window**: 300ms. The maximum gap allowed between clicks for multi-click detection.
     pub fn new() -> Result<Self> {
-        // 1. 获取 Timestamp 协议句柄
         let timestamp_handle = get_handle_for_protocol::<Timestamp>()?;
-
-        // 2. 以排他模式打开协议（确保我们可以稳定读取硬件计数器）
         let timestamp = open_protocol_exclusive::<Timestamp>(timestamp_handle)?;
 
-        // 3. 获取硬件频率信息
+        // get timestamp frequency and step (timestamp may overflow).
         let props = timestamp.get_properties()?;
         let freq = props.frequency;
 
         Ok(Self {
             timestamp,
-            frequency: freq,
+            // --- Core Timing Configuration ---
 
-            // --- 核心时间配置 ---
-
-            // 判定抬手超时：建议 150-200ms。
-            // 必须大于键盘在按住时发送两个 KeyData 之间的最大间隔。
-            release_timeout: (freq * 200) / 1000,
-
-            // 触发长按所需时间：建议 500ms。
+            // Must be greater than the maximum interval between two KeyData repeats from hardware.
+            release_timeout: (freq * 150) / 1000,
             long_press_delay: (freq * 500) / 1000,
-
-            // 连击窗口（双击/三击判定）：建议 250-300ms。
-            // 两次点击（松开到下一次按下）超过这个时间，连击计数器重置。
+            // If the time between release and next press exceeds this, the counter resets.
             click_window: (freq * 300) / 1000,
-
-            // 长按触发后的字符重复频率：建议 100ms (即每秒 10 次)。
-            repeat_delay: (freq * 100) / 1000,
 
             state: State::Idle,
             event_queue: VecDeque::new(),
         })
     }
 
+    /// Updates the state machine with the current hardware key status and returns the next logical event.
+    ///
+    /// This is the core driving method of the input system. It should be called frequently
+    /// (typically once per main loop iteration) to ensure accurate timing for long-press
+    /// and multi-click detection.
+    ///
+    /// #### Execution Flow
+    /// 1. **Queue Priority**: If events are already pending in the internal buffer (e.g., a `Click`
+    ///    generated in the previous cycle), the oldest event is returned immediately.
+    /// 2. **Modifier Guard**: Ignores `NUL_16` characters (often sent when only modifiers like
+    ///    Shift/Ctrl are pressed) to prevent interrupting active keystrokes.
+    /// 3. **State Logic**:
+    ///    - **Idle**: Transitions to `Active` on the first valid key press.
+    ///    - **Active**: Tracks hold duration for `LongPressed` and `Repeat` events. Detects
+    ///      key switches and timeouts (physical releases).
+    ///    - **Cooldown**: Waits for a potential second press of the same key to increment
+    ///      the click counter (multi-click logic).
+    ///
+    /// #### Returns
+    /// - `Some(InputEvent)`: The next semantic event in the sequence.
+    /// - `None`: If no new event was generated or if the input was filtered.
     pub fn update(&mut self, current_key: Option<KeyData>) -> Option<InputEvent> {
-        // 1. 队列存量优先
-        if let Some(event) = self.event_queue.pop_front() {
-            return Some(event);
-        }
+        // queue storage priority
+        // ensure the state machine sequence is executed
+        if let Some(event) = self.event_queue.pop_front() { return Some(event) }
+
+        // modifier key guard (filter realtime mode).
+        if let Some(KeyData { key: Printable(NUL_16), .. }) = current_key { return None }
 
         let now = self.timestamp.get_timestamp();
 
-        match self.state.clone() {
+        match &mut self.state {
             State::Idle => {
+                // idle -> active
                 if let Some(key) = current_key {
                     self.enter_active(key, now, 1);
                 }
-            }
+                // idle -> idle
+            },
 
-            State::Active { key, start_time, last_seen_time, long_press_triggered, next_repeat_time, click_count } => {
-                if let Some(curr) = current_key {
-                    if key_eq(&key, &curr) {
-                        // 【持续按下】更新 last_seen，检查长按
-                        let mut next_repeat = next_repeat_time;
-                        let mut lp_triggered = long_press_triggered;
+            State::Active {
+                key,
+                start_time,
+                last_seen_time,
+                long_press_triggered,
+                click_count
+            } => {
+                match current_key {
+                    // 1. continuous press of the same key
+                    Some(curr) if &curr == key => {
+                        *last_seen_time = now;
+                        let held_duration = now.saturating_sub(*start_time);
 
-                        if !lp_triggered && now.saturating_sub(start_time) > self.long_press_delay {
-                            lp_triggered = true;
-                            next_repeat = now + self.repeat_delay;
-                            self.event_queue.push_back(InputEvent::LongPressed(key));
-                        } else if lp_triggered && now >= next_repeat {
-                            next_repeat = now + self.repeat_delay;
-                            self.event_queue.push_back(InputEvent::Repeat(key));
+                        if !*long_press_triggered && held_duration > self.long_press_delay {
+                            *long_press_triggered = true;
+                            self.event_queue.push_back(InputEvent::LongPressed(*key));
+                        } else if *long_press_triggered {
+                            // Throttling: Only queue Repeat if the queue is empty or the last event is different.
+                            if !self.event_queue.back().is_some_and(|e| matches!(e, InputEvent::Repeat(k) if k == key)) {
+                                self.event_queue.push_back(InputEvent::Repeat(*key));
+                            }
                         }
+                    }
 
-                        self.state = State::Active {
-                            key,
-                            start_time,
-                            last_seen_time: now, // 刷新心跳
-                            long_press_triggered: lp_triggered,
-                            next_repeat_time: next_repeat,
-                            click_count,
-                        };
-                    } else {
-                        // 【换键】强制结算旧键，开始新键
-                        self.emit_release_and_click(&key, long_press_triggered, click_count);
+                    // 2. key switched (pressed a different key without releasing)
+                    Some(curr) => {
+                        let (k, lp, c) = (*key, *long_press_triggered, *click_count);
+                        self.emit_release_and_click(&k, lp, c);
+
+                        // reset to idle first to clear the mutable borrow of the current state,
+                        // then enter active for the new key.
+                        self.state = State::Idle;
                         self.enter_active(curr, now, 1);
                     }
-                } else {
-                    // 【无信号】检查是否心跳超时（视为抬手）
-                    if now.saturating_sub(last_seen_time) > self.release_timeout {
-                        self.emit_release_and_click(&key, long_press_triggered, click_count);
 
-                        // 只有没触发长按时，才进入连击判定期
-                        if !long_press_triggered {
-                            self.state = State::Cooldown {
-                                key,
-                                release_time: now,
-                                click_count,
-                            };
+                    // 3. check for heartbeat timeout
+                    None if now.saturating_sub(*last_seen_time) > self.release_timeout => {
+                        let (k, lp, c) = (*key, *long_press_triggered, *click_count);
+                        self.emit_release_and_click(&k, lp, c);
+
+                        self.state = if !lp {
+                            State::Cooldown { key: k, release_time: now, click_count: c }
                         } else {
-                            self.state = State::Idle;
+                            State::Idle
                         }
                     }
+
+                    // 4. No key signal but within the release timeout window
+                    None => {}
                 }
             }
 
-            State::Cooldown { key, release_time, click_count } => {
-                if let Some(curr) = current_key {
-                    if key_eq(&key, &curr) && now.saturating_sub(release_time) < self.click_window {
-                        // 【连击成功】进入 Active，累加点击数
-                        self.enter_active(curr, now, click_count + 1);
-                    } else {
-                        // 【按了别的键】或【连击窗口已过】
+            State::Cooldown {
+                key, release_time, click_count
+            } => {
+                // Calculate the time elapsed since the key was physically released
+                let elapsed = now.saturating_sub(*release_time);
+
+                match current_key {
+                    // 1. combo-click detection, Same key pressed within the valid time window.
+                    Some(curr) if curr == *key && elapsed < self.click_window => {
+                        let count = *click_count + 1;
+                        // The status must be reset to end the borrowing.
+                        self.state = State::Idle;
+                        self.enter_active(curr, now, count);
+                    }
+                    // 2. different key pressed or window expired, cooldown -> idle
+                    Some(curr) => {
                         self.state = State::Idle;
                         return self.update(Some(curr));
                     }
-                } else if now.saturating_sub(release_time) > self.click_window {
-                    // 【判定窗口关闭】回到空闲
-                    self.state = State::Idle;
+                    // 3. timeout, clear cooldown state if no input is received within the window.
+                    None if elapsed > self.click_window => {
+                        self.state = State::Idle;
+                    }
+                    // 4. still in the cooldown window and no input
+                    _ => {}
                 }
             }
         }
 
+        // return the next event produced by the logic above, if any.
         self.event_queue.pop_front()
     }
 
-    // 内部辅助：进入按下状态
-    fn enter_active(&mut self, key: KeyData, now: u64, count: u32) {
+    /// Transition the state machine into the `Active` state and record the initial press.
+    ///
+    /// This helper function:
+    /// 1. Updates the internal state to `Active` with the provided key and timestamp.
+    /// 2. Resets the `long_press_triggered` flag for the new press cycle.
+    /// 3. Sets the `click_count` (carried over from `Cooldown` or initialized to 1).
+    /// 4. Pushes a `Pressed` event into the notification queue.
+    ///
+    /// #### Parameters
+    /// * `key` - The metadata of the key being pressed.
+    /// * `now` - The current hardware timestamp.
+    /// * `count` - The current sequence count (e.g., 2 for a double-click).
+    #[inline]
+    fn enter_active(&mut self, key: KeyData, now: u64, count: usize) {
         self.state = State::Active {
             key,
             start_time: now,
             last_seen_time: now,
             long_press_triggered: false,
-            next_repeat_time: now + self.long_press_delay,
             click_count: count,
         };
         self.event_queue.push_back(InputEvent::Pressed(key));
     }
 
-    // 内部辅助：发出 Released 和 Click 事件
-    fn emit_release_and_click(&mut self, key: &KeyData, lp_triggered: bool, count: u32) {
+    /// Generates finalization events when a key is released or timed out.
+    ///
+    /// This helper handles the logic for ending a press cycle:
+    /// 1. Always generates a `Released` event to signal the end of physical input.
+    /// 2. Generates a `Click` event only if the press did not mature into a `LongPressed` event.
+    ///
+    /// By separating `Released` from `Click`, the system allows UI elements to clean up
+    /// "held" states even if no logical click was registered.
+    ///
+    /// #### Parameters
+    /// * `key` - The metadata of the key being released.
+    /// * `lp_triggered` - Whether a `LongPressed` event was already sent for this cycle.
+    /// * `count` - The final click count for this interaction.
+    #[inline]
+    fn emit_release_and_click(&mut self, key: &KeyData, lp_triggered: bool, count: usize) {
         self.event_queue.push_back(InputEvent::Released(*key));
-        // 如果长按触发了，就不再产生 Click 事件（长按逻辑终结了点击序列）
         if !lp_triggered {
             self.event_queue.push_back(InputEvent::Click(*key, count));
         }
