@@ -31,24 +31,24 @@ pub struct RawKeyData {
 
 // Protocol constant definition
 // Key combination status mask
-pub const SHIFT_STATE_VALID: u32     = 0x8000_0000;
-pub const RIGHT_SHIFT_PRESSED: u32   = 0x0000_0001;
-pub const LEFT_SHIFT_PRESSED: u32    = 0x0000_0002;
-pub const RIGHT_CONTROL_PRESSED: u32 = 0x0000_0004;
-pub const LEFT_CONTROL_PRESSED: u32  = 0x0000_0008;
-pub const RIGHT_ALT_PRESSED: u32     = 0x0000_0010;
-pub const LEFT_ALT_PRESSED: u32      = 0x0000_0020;
-pub const RIGHT_LOGO_PRESSED: u32    = 0x0000_0040;
-pub const LEFT_LOGO_PRESSED: u32     = 0x0000_0080;
-pub const MENU_KEY_PRESSED: u32      = 0x0000_0100;
-pub const SYS_REQ_PRESSED: u32       = 0x0000_0200;
+pub const RIGHT_SHIFT_PRESSED: u32   = 0b0000_0000_0000_0000_0000_00__0000000001;
+pub const LEFT_SHIFT_PRESSED: u32    = 0b0000_0000_0000_0000_0000_00__0000000010;
+pub const RIGHT_CONTROL_PRESSED: u32 = 0b0000_0000_0000_0000_0000_00__0000000100;
+pub const LEFT_CONTROL_PRESSED: u32  = 0b0000_0000_0000_0000_0000_00__0000001000;
+pub const RIGHT_ALT_PRESSED: u32     = 0b0000_0000_0000_0000_0000_00__0000010000;
+pub const LEFT_ALT_PRESSED: u32      = 0b0000_0000_0000_0000_0000_00__0000100000;
+pub const RIGHT_LOGO_PRESSED: u32    = 0b0000_0000_0000_0000_0000_00__0001000000;
+pub const LEFT_LOGO_PRESSED: u32     = 0b0000_0000_0000_0000_0000_00__0010000000;
+pub const MENU_KEY_PRESSED: u32      = 0b0000_0000_0000_0000_0000_00__0100000000;
+pub const SYS_REQ_PRESSED: u32       = 0b0000_0000_0000_0000_0000_00__1000000000;
+pub const SHIFT_STATE_VALID: u32     = 0b1000_0000_0000_0000_0000_00__0000000000;
 
 // Toggle state mask
-pub const TOGGLE_STATE_VALID: u8     = 0x80;
-pub const KEY_STATE_EXPOSED: u8      = 0x40;
-pub const SCROLL_LOCK_ACTIVE: u8     = 0x01;
-pub const NUM_LOCK_ACTIVE: u8        = 0x02;
-pub const CAPS_LOCK_ACTIVE: u8       = 0x04;
+pub const SCROLL_LOCK_ACTIVE: u8     = 0b0000_0001;
+pub const NUM_LOCK_ACTIVE: u8        = 0b0000_0010;
+pub const CAPS_LOCK_ACTIVE: u8       = 0b0000_0100;
+pub const KEY_STATE_EXPOSED: u8      = 0b0100_0000;
+pub const TOGGLE_STATE_VALID: u8     = 0b1000_0000;
 
 // Protocol interface definition
 /// Key notification callback function type

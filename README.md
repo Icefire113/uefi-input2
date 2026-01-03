@@ -37,6 +37,7 @@ use uefi::prelude::*;
 use uefi::{print, println};
 use uefi::proto::console::text::Key::{Printable, Special};
 use uefi::proto::console::text::ScanCode;
+use uefi::boot::check_event;
 
 #[entry]
 fn main() -> Status {
@@ -44,17 +45,21 @@ fn main() -> Status {
 
     uefi_input2::with_stdin(|input| {
         loop {
-            if let Some(data) = input.read_key_stroke_ex() {
-                if data.shift() { println!("Shift is being held!") }
-                match data.key {
-                   Printable(c) if u16::from(c) == 0x0D => print!("\r\n"),
-                   Printable(c) => print!("{}", c),
-                   Special(code) if code == ScanCode::ESCAPE => {
-                       println!("Exiting...");
-                       return Ok(())
-                   },
-                   _ => {}
-               }
+            if let Some(event) = input.wait_for_key_event() {
+                if check_event(event)? {
+                    if let Some(data) = input.read_key_stroke_ex() {
+                        if data.shift() { println!("Shift is being held!") }
+                        match data.key {
+                           Printable(c) if u16::from(c) == 0x0D => print!("\r\n"),
+                           Printable(c) => print!("{}", c),
+                           Special(code) if code == ScanCode::ESCAPE => {
+                               println!("Exiting...");
+                               return Ok(())
+                           },
+                           _ => {}
+                       }
+                    }
+                }
             }
         }
         Ok(())
@@ -91,7 +96,7 @@ this script is intentionally authored in reverse order for compatibility.
 qemu-system-x86_64 -drive if=pflash,format=raw,file=qemu/OVMF.fd -drive format=raw,file=fat:rw:qemu -m 4G -device usb-ehci -device usb-tablet -smp 4 -cpu max -monitor stdio
 mv -Force .\target\x86_64-unknown-uefi\debug\examples\*.efi .\qemu\EFI\BOOT\BOOTX64.EFI
 rm .\qemu\EFI\BOOT\BOOTX64.EFI
-cargo build --example test_polling_hotplug --all-features
+cargo build --example test_enable_realtime --all-features
 ```
 
 About Version

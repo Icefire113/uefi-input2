@@ -1,7 +1,7 @@
 #![no_main]
 #![no_std]
 
-use uefi::boot::ScopedProtocol;
+use uefi::boot::{check_event, ScopedProtocol};
 use uefi::{print, println, Result};
 use uefi::prelude::*;
 use uefi::proto::console::text::Key::Printable;
@@ -24,6 +24,10 @@ fn main() -> Status {
         if index == 0 {
             KeyData::realtime_init(input, true)?;
         }
+
+        let Some(event) = input.wait_for_key_event() else { return Ok(()) };
+        if !check_event(event)? { return Ok(()) }
+
         match input.read_key_stroke_ex() {
             Some(KeyData { key: Printable(c), .. }) => {
                 match u16::from(c) {

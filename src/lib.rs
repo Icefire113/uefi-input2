@@ -26,30 +26,34 @@
 //! use uefi::{print, println};
 //! use uefi::proto::console::text::Key::{Printable, Special};
 //! use uefi::proto::console::text::ScanCode;
-//!
+//! use uefi::boot::check_event;
+//! 
 //! #[entry]
 //! fn main() -> Status {
 //!     uefi::helpers::init().unwrap();
-//!
+//! 
 //!     uefi_input2::with_stdin(|input| {
 //!         loop {
-//!             if let Some(data) = input.read_key_stroke_ex() {
-//!                 if data.shift() { println!("Shift is being held!") }
-//!
-//!                 match data.key {
-//!                    Printable(c) if u16::from(c) == 0x0D => print!("\r\n"),
-//!                    Printable(c) if u16::from(c) >= 0x20 => print!("{}", c),
-//!                    Special(code) if code == ScanCode::ESCAPE => {
-//!                        println!("Exiting...");
-//!                        return Ok(())
-//!                    },
-//!                    _ => {}
-//!                }
+//!             if let Some(event) = input.wait_for_key_event() {
+//!                 if check_event(event)? {
+//!                     if let Some(data) = input.read_key_stroke_ex() {
+//!                         if data.shift() { println!("Shift is being held!") }
+//!                         match data.key {
+//!                            Printable(c) if u16::from(c) == 0x0D => print!("\r\n"),
+//!                            Printable(c) => print!("{}", c),
+//!                            Special(code) if code == ScanCode::ESCAPE => {
+//!                                println!("Exiting...");
+//!                                return Ok(())
+//!                            },
+//!                            _ => {}
+//!                        }
+//!                     }
+//!                 }
 //!             }
 //!         }
 //!         Ok(())
 //!     }).unwrap();
-//!
+//! 
 //!     Status::SUCCESS
 //! }
 //! ```
@@ -125,7 +129,7 @@ where F: FnMut(&mut Vec<ScopedProtocol<Input>>) -> Result<R> {
 /// only supports a maximum of 8 keyboards.
 #[cfg(not(feature = "alloc"))]
 pub fn with_stdins<F, R>(mut f: F) -> Result<R>
-where F: FnMut(&mut [Option<ScopedProtocol<Input>>; 8]) -> Result<R> {
+where F: FnMut(&mut [Option<ScopedProtocol<Input>>]) -> Result<R> {
     use uefi::boot::{locate_handle_buffer, SearchType};
     use uefi::Identify;
 

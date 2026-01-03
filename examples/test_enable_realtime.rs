@@ -1,5 +1,7 @@
 #![no_main]
 #![no_std]
+
+use uefi::boot::check_event;
 use uefi::prelude::*;
 use uefi::println;
 
@@ -28,17 +30,21 @@ fn main() -> Status {
             spin_loop();
 
             for keyboard in stdins.iter_mut() {
-                if let Some(key_data) = keyboard.read_key_stroke_ex() {
-                    if key_data.supports_modifiers() && key_data.ctrl() {
-                        print!("[Ctrl] ");
-                    }
-                    match key_data.key {
-                        Printable(c) if u16::from(c) >= 0x20 => print!("{}", c),
-                        Special(code) if code == ScanCode::ESCAPE => {
-                            println!("Exiting...");
-                            return Ok(());
-                        },
-                        _ => {}
+                if let Some(event) = keyboard.wait_for_key_event() {
+                    if check_event(event)? {
+                        if let Some(key_data) = keyboard.read_key_stroke_ex() {
+                            if key_data.supports_modifiers() && key_data.ctrl() {
+                                print!("[Ctrl] ");
+                            }
+                            match key_data.key {
+                                Printable(c) if u16::from(c) >= 0x20 => print!("{}", c),
+                                Special(code) if code == ScanCode::ESCAPE => {
+                                    println!("Exiting...");
+                                    return Ok(());
+                                },
+                                _ => {}
+                            }
+                        }
                     }
                 }
             }
