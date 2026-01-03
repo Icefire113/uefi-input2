@@ -26,14 +26,12 @@
 //! use uefi::{print, println};
 //! use uefi::proto::console::text::Key::{Printable, Special};
 //! use uefi::proto::console::text::ScanCode;
-//! use uefi_input2::with_stdin;
-//! use uefi_input2::simple_text_input_ex::{LEFT_SHIFT_PRESSED, RIGHT_SHIFT_PRESSED};
 //!
 //! #[entry]
 //! fn main() -> Status {
 //!     uefi::helpers::init().unwrap();
 //!
-//!     with_stdin(|input| {
+//!     uefi_input2::with_stdin(|input| {
 //!         loop {
 //!             if let Some(data) = input.read_key_stroke_ex() {
 //!                 if data.shift() { println!("Shift is being held!") }

@@ -37,14 +37,12 @@ use uefi::prelude::*;
 use uefi::{print, println};
 use uefi::proto::console::text::Key::{Printable, Special};
 use uefi::proto::console::text::ScanCode;
-use uefi_input2::with_stdin;
-use uefi_input2::simple_text_input_ex::{LEFT_SHIFT_PRESSED, RIGHT_SHIFT_PRESSED};
 
 #[entry]
 fn main() -> Status {
     uefi::helpers::init().unwrap();
 
-    with_stdin(|input| {
+    uefi_input2::with_stdin(|input| {
         loop {
             if let Some(data) = input.read_key_stroke_ex() {
                 if data.shift() { println!("Shift is being held!") }
@@ -66,6 +64,25 @@ fn main() -> Status {
 }
 ```
 
+Manual Build
+----------------------------------------------
+reference example:
+```shell
+git clone https://github.com/Bemly/uefi-input2.git
+cd uefi-input2
+# enable all features on x64 platform
+cargo build --release --target x86_64-unknown-uefi --all-features
+# enable alloc feature on arm64 platform
+cargo build --release --target aarch64-unknown-uefi --features alloc 
+# disable default feature on x32 platform for debug mode
+cargo build --target i686-unknown-uefi --no-default-features 
+```
+then use this crate in your project
+```toml
+[dependencies]
+uefi-input2 = { version = "", path = "../uefi-input2" }
+```
+
 Test
 ----------------------------------------------
 Due to a reverse-execution bug in the RustRover README runner,
@@ -74,8 +91,15 @@ this script is intentionally authored in reverse order for compatibility.
 qemu-system-x86_64 -drive if=pflash,format=raw,file=qemu/OVMF.fd -drive format=raw,file=fat:rw:qemu -m 4G -device usb-ehci -device usb-tablet -smp 4 -cpu max -monitor stdio
 mv -Force .\target\x86_64-unknown-uefi\debug\examples\*.efi .\qemu\EFI\BOOT\BOOTX64.EFI
 rm .\qemu\EFI\BOOT\BOOTX64.EFI
-cargo build --example test_multi_input --all-features
+cargo build --example test_enable_realtime --all-features
 ```
+
+About Version
+----------------------------------------------
+Major/Minor semver follows Minor/Patch for uefi-rs crate version.
+Patch semver is for uefi-input2 own version.
+
+such as: uefi-input2 36.1.x <=dependency= uefi-rs 0.36.1
 
 License
 ----------------------------------------------

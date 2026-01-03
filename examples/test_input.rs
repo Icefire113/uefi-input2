@@ -19,10 +19,10 @@ fn main() -> Status {
     uefi_input2::with_stdin(|input| {
         loop {
             if let Some(key_data) = input.read_key_stroke_ex() {
-                if key_data.is_realtime() {
+                if key_data.is_realtime_mode() {
                     print!("X");
                 }
-                if key_data.function_enable() {
+                if key_data.supports_modifiers() {
                     if key_data.ctrl() {
                         print!("[Ctrl] ");
                     }
