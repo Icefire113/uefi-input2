@@ -14,7 +14,7 @@
 //!
 //! ## Feature List
 //! - **alloc**: Enables `Vec` support. For example, `with_stdins` requires
-//!     the `alloc` feature to collect multiple input handles via `find_handles`.
+//!     the `alloc` feature to more than 8 multiple input handles via `find_handles`.
 //!
 //! ## Minimal Example
 //! Simply replace your import and use the same closure-based pattern:
@@ -68,6 +68,9 @@ pub mod simple_text_input_ex;
 pub mod input;
 /// height-level data wrapper
 pub mod key_data;
+/// keyboard hotplug support (Not Recommend, Unplugging is UEFI Spec Undefined Behavior)
+#[cfg(feature = "alloc")]
+pub mod hotplug;
 
 use uefi::boot::{get_handle_for_protocol, open_protocol_exclusive, ScopedProtocol};
 use uefi::Result;
@@ -76,9 +79,7 @@ use crate::input::Input;
 /// it has roughly the same function as `uefi::system::with_stdin`.
 /// only support single keyboard.
 pub fn with_stdin<F, R>(mut f: F) -> Result<R>
-where
-    F: FnMut(&mut ScopedProtocol<Input>) -> Result<R>
-{
+where F: FnMut(&mut ScopedProtocol<Input>) -> Result<R> {
     let input = get_handle_for_protocol::<Input>()?;
     let mut input = open_protocol_exclusive::<Input>(input)?;
 
@@ -87,10 +88,15 @@ where
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
+
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
+#[cfg(feature = "alloc")]
+use uefi::boot::find_handles;
 
-/// support multiple keyboard. (require `alloc` feature)
+/// support multiple keyboard.
+///
+/// Tips: if OEM UEFI impl ConSplitter driver(Virtual ConIn), keyboard hotplug may is supported.
 ///
 /// #### Usage
 /// ```rust,no_run
@@ -104,10 +110,7 @@ use alloc::vec::Vec;
 /// ```
 #[cfg(feature = "alloc")]
 pub fn with_stdins<F, R>(mut f: F) -> Result<R>
-where
-    F: FnMut(&mut Vec<ScopedProtocol<Input>>) -> Result<R>
-{
-    use uefi::boot::find_handles;
+where F: FnMut(&mut Vec<ScopedProtocol<Input>>) -> Result<R> {
 
     let inputs = find_handles::<Input>()?;
     let mut keyboards: Vec<ScopedProtocol<Input>> = Vec::with_capacity(inputs.len());
@@ -116,5 +119,27 @@ where
         keyboards.push(keyboard);
     }
 
+    f(&mut keyboards)
+}
+
+/// only supports a maximum of 8 keyboards.
+#[cfg(not(feature = "alloc"))]
+pub fn with_stdins<F, R>(mut f: F) -> Result<R>
+where F: FnMut(&mut [Option<ScopedProtocol<Input>>; 8]) -> Result<R> {
+    use uefi::boot::{locate_handle_buffer, SearchType};
+    use uefi::Identify;
+
+    let inputs = locate_handle_buffer(SearchType::ByProtocol(&Input::GUID))?;
+
+    let mut keyboards: [Option<ScopedProtocol<Input>>; 8]
+        =  [None, None, None, None, None, None, None, None];
+
+    for (i, &input) in inputs.iter().enumerate() {
+        if i >= keyboards.len() { break } // safe check
+
+        if let Ok(keyboard) = open_protocol_exclusive::<Input>(input) {
+            keyboards[i] = Some(keyboard);
+        }
+    }
     f(&mut keyboards)
 }

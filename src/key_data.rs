@@ -162,8 +162,9 @@ impl KeyData {
     pub fn caps_lock(&self) -> bool { (self.key_state.key_toggle_state & CAPS_LOCK_ACTIVE) != 0 }
 
     /// initialize realtime mode.
+    ///
     /// warn: this init function could overwrite the existing toggle state.
-    /// warn: it is recommended to call this function at program startup.
+    ///     it is recommended to call this function at program startup.
     #[inline]
     pub fn realtime_init(stdin: &mut ScopedProtocol<Input>, enable: bool) -> Result {
         // #define EFI_KEY_STATE_EXPOSED 0x40 <= UEFI Spec V2.8

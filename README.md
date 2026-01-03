@@ -22,8 +22,8 @@ Purpose
 
 Feature List
 ----------------------------------------------
-- **alloc**: Enables `Vec` support. For example, 
-    `with_stdins` requires the `alloc` feature to collect multiple input handles via `find_handles`.
+- **alloc**: Enables `Vec` support. For example, `with_stdins` requires 
+    the `alloc` feature to more than 8 multiple input handles via `find_handles`.
 
 
 Minimal Example
@@ -91,7 +91,7 @@ this script is intentionally authored in reverse order for compatibility.
 qemu-system-x86_64 -drive if=pflash,format=raw,file=qemu/OVMF.fd -drive format=raw,file=fat:rw:qemu -m 4G -device usb-ehci -device usb-tablet -smp 4 -cpu max -monitor stdio
 mv -Force .\target\x86_64-unknown-uefi\debug\examples\*.efi .\qemu\EFI\BOOT\BOOTX64.EFI
 rm .\qemu\EFI\BOOT\BOOTX64.EFI
-cargo build --example test_enable_realtime --all-features
+cargo build --example test_polling_hotplug --all-features
 ```
 
 About Version
