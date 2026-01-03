@@ -34,21 +34,20 @@
 //! 
 //!     uefi_input2::with_stdin(|input| {
 //!         loop {
-//!             if let Some(event) = input.wait_for_key_event() {
-//!                 if check_event(event)? {
-//!                     if let Some(data) = input.read_key_stroke_ex() {
-//!                         if data.shift() { println!("Shift is being held!") }
-//!                         match data.key {
-//!                            Printable(c) if u16::from(c) == 0x0D => print!("\r\n"),
-//!                            Printable(c) => print!("{}", c),
-//!                            Special(code) if code == ScanCode::ESCAPE => {
-//!                                println!("Exiting...");
-//!                                return Ok(())
-//!                            },
-//!                            _ => {}
-//!                        }
-//!                     }
-//!                 }
+//!             let Some(event) = input.wait_for_key_event() else { continue };
+//!             if !check_event(event)? { continue }
+//!             
+//!             if let Some(data) = input.read_key_stroke_ex() {
+//!                 if data.shift() { println!("Shift is being held!") }
+//!                 match data.key {
+//!                    Printable(c) if u16::from(c) == 0x0D => print!("\r\n"),
+//!                    Printable(c) => print!("{}", c),
+//!                    Special(code) if code == ScanCode::ESCAPE => {
+//!                        println!("Exiting...");
+//!                        return Ok(())
+//!                    },
+//!                    _ => {}
+//!                }
 //!             }
 //!         }
 //!         Ok(())
