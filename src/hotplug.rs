@@ -1,3 +1,9 @@
+// Copyright (c) Bemly, January 2026
+// You may copy and distribute this file freely.  Any queries and
+// complaints should be forwarded to bemly_@petalmail.com.
+// If you make any changes to this file, please do not distribute
+// the results under the name `bemly'.
+
 use alloc::vec::Vec;
 use core::ffi::c_void;
 use core::hint::spin_loop;
@@ -21,7 +27,8 @@ extern "efiapi" fn on_keyboard_hotplug(_event: Event, ctx: Option<NonNull<c_void
     }
 }
 
-/// Warn: Unpredictable!
+/// Warn: Unpredictable! Unsafe!
+/// This may cause the program to hang.
 impl KeyboardHotPlugMonitor {
     /// enable global keyboard hotplug listener
     /// dirty_flag_ptr: recommend static bool pointer

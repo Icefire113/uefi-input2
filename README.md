@@ -45,6 +45,10 @@ fn main() -> Status {
 
     uefi_input2::with_stdin(|input| {
         loop {
+            // Performance Note: Using wait_for_key_event + check_event conforms to UEFI best practices 
+            // by reducing CPU overhead and bus traffic. However, for maximum loop throughput 
+            // (e.g., high-frequency GOP rendering), consider calling read_key_stroke_ex directly 
+            // to save the extra protocol call.
             let Some(event) = input.wait_for_key_event() else { continue };
             if !check_event(event)? { continue }
             
@@ -95,7 +99,7 @@ this script is intentionally authored in reverse order for compatibility.
 qemu-system-x86_64 -drive if=pflash,format=raw,file=qemu/OVMF.fd -drive format=raw,file=fat:rw:qemu -m 4G -device usb-ehci -device usb-tablet -smp 4 -cpu max -monitor stdio
 mv -Force .\target\x86_64-unknown-uefi\debug\examples\*.efi .\qemu\EFI\BOOT\BOOTX64.EFI
 rm .\qemu\EFI\BOOT\BOOTX64.EFI
-cargo build --example test_input_hotplug --all-features
+cargo build --example test_ctrl_notification --all-features
 ```
 
 About Version

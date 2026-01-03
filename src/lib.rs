@@ -27,16 +27,20 @@
 //! use uefi::proto::console::text::Key::{Printable, Special};
 //! use uefi::proto::console::text::ScanCode;
 //! use uefi::boot::check_event;
-//! 
+//!
 //! #[entry]
 //! fn main() -> Status {
 //!     uefi::helpers::init().unwrap();
-//! 
+//!
 //!     uefi_input2::with_stdin(|input| {
 //!         loop {
+//!             // Performance Note: Using wait_for_key_event + check_event conforms to UEFI
+//!             // best practices by reducing CPU overhead and bus traffic. However,
+//!             // for maximum loop throughput (e.g., high-frequency GOP rendering),
+//!             // consider calling read_key_stroke_ex directly to save the extra protocol call.
 //!             let Some(event) = input.wait_for_key_event() else { continue };
 //!             if !check_event(event)? { continue }
-//!             
+//!
 //!             if let Some(data) = input.read_key_stroke_ex() {
 //!                 if data.shift() { println!("Shift is being held!") }
 //!                 match data.key {
@@ -52,7 +56,7 @@
 //!         }
 //!         Ok(())
 //!     }).unwrap();
-//! 
+//!
 //!     Status::SUCCESS
 //! }
 //! ```
@@ -106,7 +110,12 @@ use uefi::boot::find_handles;
 /// uefi_input2::with_stdins(|stdins| {
 ///     loop {
 ///         for keyboard in stdins.iter_mut() {
-///             if let Some(key_data) = keyboard.read_key_stroke_ex() { /* just do it! */ }
+///             let Some(event) = input.wait_for_key_event() else { continue };
+///             if !check_event(event)? { continue }
+///
+///             if let Some(key_data) = keyboard.read_key_stroke_ex() {
+///                 // just do it!
+///             }
 ///         }
 ///     }
 ///  }).unwarp();
