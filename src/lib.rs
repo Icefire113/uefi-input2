@@ -78,6 +78,8 @@ pub mod key_data;
 /// keyboard hotplug support (Not Recommend, Unplugging is UEFI Spec Undefined Behavior)
 #[cfg(feature = "alloc")]
 pub mod hotplug;
+#[cfg(feature = "alloc")]
+pub mod state_machine;
 
 use uefi::boot::{get_handle_for_protocol, open_protocol_exclusive, ScopedProtocol};
 use uefi::Result;

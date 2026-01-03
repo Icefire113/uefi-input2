@@ -19,6 +19,7 @@ extern "efiapi" fn on_key_notify(key_data: *mut RawKeyData) -> Status {
 #[allow(unreachable_code)]
 #[entry]
 fn main() -> Status {
+
     println!("Ctrl Notice Integration Test");
 
     uefi_input2::with_stdin(|input| {
