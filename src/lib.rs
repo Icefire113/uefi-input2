@@ -1,3 +1,9 @@
+// Copyright (c) Bemly, January 2026
+// You may copy and distribute this file freely.  Any queries and
+// complaints should be forwarded to bemly_@petalmail.com.
+// If you make any changes to this file, please do not distribute
+// the results under the name `bemly'.
+
 //! # UEFI Simple Text Input Ex Protocol Wrapper
 //!
 //! This library provides a safe, idiomatic Rust wrapper for the `EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL`.
@@ -60,11 +66,6 @@
 //!     Status::SUCCESS
 //! }
 //! ```
-// Copyright (c) Bemly, January 2026
-// You may copy and distribute this file freely.  Any queries and
-// complaints should be forwarded to bemly_@petalmail.com.
-// If you make any changes to this file, please do not distribute
-// the results under the name `bemly'.
 
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -80,6 +81,8 @@ pub mod key_data;
 pub mod hotplug;
 #[cfg(feature = "alloc")]
 pub mod state_machine;
+#[cfg(feature = "alloc")]
+pub mod state_machine_fallback;
 
 use uefi::boot::{get_handle_for_protocol, open_protocol_exclusive, ScopedProtocol};
 use uefi::Result;

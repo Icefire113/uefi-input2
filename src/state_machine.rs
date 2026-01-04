@@ -12,6 +12,7 @@ use uefi::Result;
 use uefi::data_types::chars::NUL_16;
 use crate::key_data::KeyData;
 use uefi::proto::misc::Timestamp;
+use crate::state_machine_fallback::StateMachineFallback;
 
 /// Represents logical input events identified by the state machine.
 ///
@@ -31,9 +32,35 @@ pub enum InputEvent {
     /// receiving further signals for this key, ensuring the release is intentional.
     Released(KeyData),
 
-    /// Triggered once when a key has been held down longer than the `long_press_delay` threshold.
+    /// #### Long-Press & Initial Delay
+    /// The "Initial Delay" is the period between the first [`InputEvent::LongPressed`]
+    /// and the subsequent [`InputEvent::Repeat`] stream. In this implementation:
+    /// 1. When `held_duration > long_press_delay`, a `LongPressed` event is fired.
+    /// 2. Immediately after (in the same or next tick), the state machine enters
+    ///    "Repeat Mode", producing `Repeat` events as long as the key is held.
     ///
-    /// **Timing**: Occurs exactly once per press cycle, following a `Pressed` event.
+    /// #### Event Sequence Timing
+    /// Below is the typical lifecycle of a multi-click sequence followed by a hold:
+    ///
+    /// ```text
+    /// Timeline: 0ms       100ms      200ms      300ms      800ms      900ms
+    /// Action:   PRESS  -> RELEASE -> PRESS  -> HOLD     -> (Wait)  -> RELEASE
+    ///           |          |          |          |          |          |
+    /// State:    Idle    -> Active  -> Cooldown-> Active  -> Active  -> Idle
+    ///           |          |          |          |          |          |
+    /// Events:   Pressed -> Released-> (None)  -> Pressed -> LongPress-> Released
+    ///                      Click(1)                         Repeat...
+    /// ```
+    ///
+    /// **Full Sequence Breakdown:**
+    /// 1. **Pressed**: Initial physical press detected.
+    /// 2. **Released**: Key let go within a short duration.
+    /// 3. **Click(1)**: Emitted after `Released` as part of the click detection.
+    /// 4. **Cooldown**: The machine waits for `click_window` to see if a second click follows.
+    /// 5. **Pressed (2nd)**: Key pressed again within `click_window`, incrementing `click_count`.
+    /// 6. **LongPressed**: The 2nd press is held longer than `long_press_delay`.
+    /// 7. **Repeat**: Periodic events generated while the key remains held.
+    /// 8. **Released & Click(2)**: Final cleanup when the key is finally released.
     LongPressed(KeyData),
 
     /// Dispatched continuously after a `LongPressed` event as long as the key remains held.
@@ -105,7 +132,8 @@ enum State {
 pub struct StateMachine {
     /// The hardware timestamp protocol used to fetch high-resolution time ticks.
     /// This is used to calculate durations for timeouts and delays.
-    timestamp: ScopedProtocol<Timestamp>,
+    timestamp: Option<ScopedProtocol<Timestamp>>,
+    fallback: Option<StateMachineFallback>,
 
     /// The threshold duration used to determine if a key has been physically released.
     /// Since UEFI might not provide an explicit "release" interrupt, the state machine
@@ -146,26 +174,43 @@ impl StateMachine {
     /// * **Long Press Delay**: 500ms. The duration before a hold is considered a long press.
     /// * **Click Window**: 300ms. The maximum gap allowed between clicks for multi-click detection.
     pub fn new() -> Result<Self> {
-        let timestamp_handle = get_handle_for_protocol::<Timestamp>()?;
-        let timestamp = open_protocol_exclusive::<Timestamp>(timestamp_handle)?;
+        let timestamp = get_handle_for_protocol::<Timestamp>()
+            .and_then(|h| open_protocol_exclusive::<Timestamp>(h))
+            .ok();
 
-        // get timestamp frequency and step (timestamp may overflow).
-        let props = timestamp.get_properties()?;
-        let freq = props.frequency;
+        match timestamp {
+            Some(timestamp) => {
+                // get timestamp frequency and step (timestamp may overflow).
+                let props = timestamp.get_properties()?;
+                let freq = props.frequency;
 
-        Ok(Self {
-            timestamp,
-            // --- Core Timing Configuration ---
+                Ok(Self {
+                    timestamp: Some(timestamp),
+                    fallback: None,
+                    // --- Core Timing Configuration ---
 
-            // Must be greater than the maximum interval between two KeyData repeats from hardware.
-            release_timeout: (freq * 150) / 1000,
-            long_press_delay: (freq * 500) / 1000,
-            // If the time between release and next press exceeds this, the counter resets.
-            click_window: (freq * 300) / 1000,
+                    // Must be greater than the maximum interval between two KeyData repeats from hardware.
+                    release_timeout: (freq * 150) / 1000,
+                    long_press_delay: (freq * 500) / 1000,
+                    // If the time between release and next press exceeds this, the counter resets.
+                    click_window: (freq * 300) / 1000,
 
-            state: State::Idle,
-            event_queue: VecDeque::new(),
-        })
+                    state: State::Idle,
+                    event_queue: VecDeque::new(),
+                })
+            },
+            None => {
+                Ok(Self {
+                    timestamp: None,
+                    fallback: Some(StateMachineFallback::new()),
+                    release_timeout: 0,
+                    long_press_delay: 0,
+                    click_window: 0,
+                    state: State::Idle,
+                    event_queue: VecDeque::new(),
+                })
+            }
+        }
     }
 
     /// Updates the state machine with the current hardware key status and returns the next logical event.
@@ -197,7 +242,11 @@ impl StateMachine {
         // modifier key guard (filter realtime mode).
         if let Some(KeyData { key: Printable(NUL_16), .. }) = current_key { return None }
 
-        let now = self.timestamp.get_timestamp();
+        if let Some(ref mut fallback) = self.fallback {
+            return fallback.update(current_key)
+        }
+        
+        let now = self.timestamp.as_ref()?.get_timestamp();
 
         match &mut self.state {
             State::Idle => {
@@ -221,6 +270,7 @@ impl StateMachine {
                         *last_seen_time = now;
                         let held_duration = now.saturating_sub(*start_time);
 
+                        // TODO: optimize this logic
                         if !*long_press_triggered && held_duration > self.long_press_delay {
                             *long_press_triggered = true;
                             self.event_queue.push_back(InputEvent::LongPressed(*key));
@@ -230,7 +280,7 @@ impl StateMachine {
                                 self.event_queue.push_back(InputEvent::Repeat(*key));
                             }
                         }
-                    }
+                    },
 
                     // 2. key switched (pressed a different key without releasing)
                     Some(curr) => {
@@ -241,7 +291,7 @@ impl StateMachine {
                         // then enter active for the new key.
                         self.state = State::Idle;
                         self.enter_active(curr, now, 1);
-                    }
+                    },
 
                     // 3. check for heartbeat timeout
                     None if now.saturating_sub(*last_seen_time) > self.release_timeout => {
@@ -253,10 +303,10 @@ impl StateMachine {
                         } else {
                             State::Idle
                         }
-                    }
+                    },
 
                     // 4. No key signal but within the release timeout window
-                    None => {}
+                    None => {},
                 }
             }
 
@@ -273,20 +323,20 @@ impl StateMachine {
                         // The status must be reset to end the borrowing.
                         self.state = State::Idle;
                         self.enter_active(curr, now, count);
-                    }
+                    },
                     // 2. different key pressed or window expired, cooldown -> idle
                     Some(curr) => {
                         self.state = State::Idle;
                         return self.update(Some(curr));
-                    }
+                    },
                     // 3. timeout, clear cooldown state if no input is received within the window.
                     None if elapsed > self.click_window => {
                         self.state = State::Idle;
-                    }
+                    },
                     // 4. still in the cooldown window and no input
-                    _ => {}
+                    _ => {},
                 }
-            }
+            },
         }
 
         // return the next event produced by the logic above, if any.
