@@ -11,7 +11,7 @@ use core::ptr::NonNull;
 use uefi::boot::{check_event, create_event, locate_handle_buffer, open_protocol_exclusive, register_protocol_notify, set_timer, ScopedProtocol, SearchType, TimerTrigger};
 use uefi::{Event, Identify, Result};
 use uefi_raw::table::boot::{EventType, Tpl};
-use crate::config::get_refresh_positive_input_device_time;
+use crate::config::refresh_positive_input_device_time;
 use crate::input::Input;
 
 /// input event notification wrapper
@@ -186,7 +186,7 @@ impl KeyboardHotPlugMonitor {
 
         set_timer(
             &timer_event,
-            TimerTrigger::Periodic(get_refresh_positive_input_device_time()),
+            TimerTrigger::Periodic(refresh_positive_input_device_time()),
         )?;
 
         macro_rules! f {

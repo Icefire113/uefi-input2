@@ -22,15 +22,15 @@ static LONG_PRESS_DELAY: AtomicU64 = AtomicU64::new(500);
 /// Typical value: 250ms - 300ms.
 static CLICK_WINDOW: AtomicU64 = AtomicU64::new(300);
 
-pub fn get_refresh_positive_input_device_time() -> u64 {
+pub fn refresh_positive_input_device_time() -> u64 {
     REFRESH_POSITIVE_INPUT_DEVICE_TIME.load(Ordering::Relaxed)
 }
 pub fn set_refresh_positive_input_device_time(ns100: u64) {
     REFRESH_POSITIVE_INPUT_DEVICE_TIME.store(ns100, Ordering::Relaxed)
 }
-pub fn get_release_timeout() -> u64 { RELEASE_TIMEOUT.load(Ordering::Relaxed) }
+pub fn release_timeout() -> u64 { RELEASE_TIMEOUT.load(Ordering::Relaxed) }
 pub fn set_release_timeout(ms: u64) { RELEASE_TIMEOUT.store(ms, Ordering::Relaxed) }
-pub fn get_long_press_delay() -> u64 { LONG_PRESS_DELAY.load(Ordering::Relaxed) }
+pub fn long_press_delay() -> u64 { LONG_PRESS_DELAY.load(Ordering::Relaxed) }
 pub fn set_long_press_delay(ms: u64) { LONG_PRESS_DELAY.store(ms, Ordering::Relaxed) }
-pub fn get_click_window() -> u64 { CLICK_WINDOW.load(Ordering::Relaxed) }
+pub fn click_window() -> u64 { CLICK_WINDOW.load(Ordering::Relaxed) }
 pub fn set_click_window(ms: u64) { CLICK_WINDOW.store(ms, Ordering::Relaxed) }

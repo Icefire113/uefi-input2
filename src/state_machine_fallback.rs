@@ -10,7 +10,7 @@ use core::time::Duration;
 use uefi::boot::stall;
 use uefi::proto::console::text::Key::Printable;
 use uefi::data_types::chars::NUL_16;
-use crate::config::{get_click_window, get_long_press_delay, get_release_timeout};
+use crate::config::{click_window, long_press_delay, release_timeout};
 use crate::key_data::KeyData;
 use crate::state_machine::{InputEvent, State};
 use crate::timer_tick;
@@ -59,9 +59,9 @@ impl StateMachineFallback {
         Self {
             timer_freq: Self::calibrate_ticks() as f64,
 
-            release_timeout: Duration::from_millis(get_release_timeout()),
-            long_press_delay: Duration::from_millis(get_long_press_delay()),
-            click_window: Duration::from_millis(get_click_window()),
+            release_timeout: Duration::from_millis(release_timeout()),
+            long_press_delay: Duration::from_millis(long_press_delay()),
+            click_window: Duration::from_millis(click_window()),
 
             state: State::Idle,
             event_queue: VecDeque::new(),

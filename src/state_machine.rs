@@ -19,7 +19,7 @@ use uefi::Result;
 use uefi::data_types::chars::NUL_16;
 use crate::key_data::KeyData;
 use uefi::proto::misc::Timestamp;
-use crate::config::{get_click_window, get_long_press_delay, get_release_timeout};
+use crate::config::{click_window, long_press_delay, release_timeout};
 use crate::state_machine_fallback::StateMachineFallback;
 
 /// Represents logical input events identified by the state machine.
@@ -193,10 +193,10 @@ impl StateMachine {
                     // --- Core Timing Configuration ---
 
                     // Must be greater than the maximum interval between two KeyData repeats from hardware.
-                    release_timeout: (freq * get_release_timeout()) / 1000,
-                    long_press_delay: (freq * get_long_press_delay()) / 1000,
+                    release_timeout: (freq * release_timeout()) / 1000,
+                    long_press_delay: (freq * long_press_delay()) / 1000,
                     // If the time between release and next press exceeds this, the counter resets.
-                    click_window: (freq * get_click_window()) / 1000,
+                    click_window: (freq * click_window()) / 1000,
 
                     state: State::Idle,
                     event_queue: VecDeque::new(),
