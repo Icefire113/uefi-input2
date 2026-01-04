@@ -1,3 +1,9 @@
+// Copyright (c) Bemly, January 2026
+// You may copy and distribute this file freely.  Any queries and
+// complaints should be forwarded to bemly_@petalmail.com.
+// If you make any changes to this file, please do not distribute
+// the results under the name `bemly'.
+
 extern crate alloc;
 use alloc::collections::VecDeque;
 use core::time::Duration;
@@ -40,20 +46,36 @@ enum State {
     },
 }
 
+/// A timing-robust input state machine that operates independently of UEFI protocols.
+///
+/// `StateMachineFallback` uses the CPU's Time Stamp Counter (TSC) and an initial
+/// calibration phase to determine elapsed time. It handles raw key transitions
+/// and converts them into semantic events like `LongPressed`, `Click`, and `Repeat`.
 pub struct StateMachineFallback {
-    // 存储 CPU 每秒的滴答数 (Frequency)
+    /// The measured frequency of the hardware timer (ticks per second).
     timer_freq: f64,
 
-    // 使用 Duration 存储阈值，逻辑更清晰
+    /// Maximum duration allowed between hardware signals before a key is considered released.
     release_timeout: Duration,
+
+    /// Duration a key must be held to trigger a `LongPressed` event.
     long_press_delay: Duration,
+
+    /// Maximum gap between a release and a press to count as a multi-click (e.g., double-click).
     click_window: Duration,
 
+    /// Current internal logic state (Idle, Active, or Cooldown).
     state: State,
+
+    /// Buffer for generated events to be consumed by the caller.
     event_queue: VecDeque<InputEvent>,
 }
 
 impl StateMachineFallback {
+    /// Calibrates the CPU tick frequency by correlating `timer_tick` with UEFI `stall`.
+    ///
+    /// This performs a 100ms delay to sample the TSC delta and extrapolates the
+    /// per-second frequency.
     fn calibrate_ticks() -> u64 {
         let start = timer_tick();
         stall(Duration::from_millis(100));
@@ -61,9 +83,9 @@ impl StateMachineFallback {
         (end - start) * 10
     }
 
-    /// 初始化状态机
-    /// timer_freq: 硬件计时器的频率（每秒多少个 tick）
-    /// 在 UEFI 中可以通过计算两个时钟中断间的 RDTSC 差值获取，或从协议获取。
+    /// Creates a new `StateMachineFallback` instance and performs hardware timing calibration.
+    ///
+    /// This function will block for approximately 100ms during the calibration phase.
     pub fn new() -> Self {
         Self {
             timer_freq: Self::calibrate_ticks() as f64,
@@ -77,6 +99,14 @@ impl StateMachineFallback {
         }
     }
 
+    /// Updates the state machine with the current keyboard input and returns the next pending event.
+    ///
+    /// # Arguments
+    /// * `current_key` - The `KeyData` currently reported by the hardware, or `None` if no key is pressed.
+    ///
+    /// # Returns
+    /// * `Some(InputEvent)` if a new event (like a Click or LongPress) has been detected.
+    /// * `None` if no new event is available or if the input is empty.
     pub fn update(&mut self, current_key: Option<KeyData>) -> Option<InputEvent> {
         if let Some(event) = self.event_queue.pop_front() { return Some(event) }
         if let Some(KeyData { key: Printable(NUL_16), .. }) = current_key { return None }
@@ -178,6 +208,7 @@ impl StateMachineFallback {
         self.event_queue.pop_front()
     }
 
+    /// Transitions the state machine into the `Active` state and queues a `Pressed` event.
     #[inline]
     fn enter_active(&mut self, key: KeyData, now_tick: u64, count: usize) {
         self.state = State::Active {
@@ -190,6 +221,7 @@ impl StateMachineFallback {
         self.event_queue.push_back(InputEvent::Pressed(key));
     }
 
+    /// Queues a `Released` event and, if the key was not long-pressed, a `Click` event.
     #[inline(always)]
     fn emit_release_and_click(&mut self, key: &KeyData, lp_triggered: bool, count: usize) {
         self.event_queue.push_back(InputEvent::Released(*key));

@@ -242,10 +242,13 @@ impl StateMachine {
         // modifier key guard (filter realtime mode).
         if let Some(KeyData { key: Printable(NUL_16), .. }) = current_key { return None }
 
+        // Check if we are running in compatibility mode.
+        // If so, delegate the update logic to the fallback handler and return early.
         if let Some(ref mut fallback) = self.fallback {
             return fallback.update(current_key)
         }
-        
+
+        // Attempt to retrieve the current hardware timestamp via the UEFI protocol.
         let now = self.timestamp.as_ref()?.get_timestamp();
 
         match &mut self.state {
@@ -269,8 +272,6 @@ impl StateMachine {
                     Some(curr) if &curr == key => {
                         *last_seen_time = now;
                         let held_duration = now.saturating_sub(*start_time);
-
-                        // TODO: optimize this logic
                         if !*long_press_triggered && held_duration > self.long_press_delay {
                             *long_press_triggered = true;
                             self.event_queue.push_back(InputEvent::LongPressed(*key));

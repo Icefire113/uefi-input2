@@ -7,7 +7,6 @@ use uefi::print;
 use uefi::proto::console::text::Key::{Printable, Special};
 use uefi_input2::key_data::KeyData;
 use uefi_input2::state_machine::{InputEvent, StateMachine};
-use uefi_input2::state_machine_fallback::StateMachineFallback;
 use uefi_input2::with_stdins;
 
 #[allow(unreachable_code)]
@@ -16,7 +15,7 @@ fn main() -> Status {
     uefi::helpers::init().expect("Failed to init UEFI");
 
     // 初始化状态机
-    let mut sm = StateMachineFallback::new();
+    let mut sm = StateMachine::new().expect("init failed.");
 
     with_stdins(|input| {
         for keyboard in input.iter_mut() {
