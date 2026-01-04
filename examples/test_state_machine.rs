@@ -68,7 +68,7 @@ fn main() -> Status {
         }
 
         Ok(())
-    }).expect("无法打开 stdin");
+    }).expect("stdin open failed.");
 
     Status::SUCCESS
 }
