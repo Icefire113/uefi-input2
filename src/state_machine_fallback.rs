@@ -10,41 +10,10 @@ use core::time::Duration;
 use uefi::boot::stall;
 use uefi::proto::console::text::Key::Printable;
 use uefi::data_types::chars::NUL_16;
+use crate::config::{get_click_window, get_long_press_delay, get_release_timeout};
 use crate::key_data::KeyData;
 use crate::state_machine::{InputEvent, State};
-
-/// Reads the high-resolution hardware cycle counter for the current CPU architecture.
-///
-/// This function provides a low-overhead timestamp used for frequency calibration
-/// and duration measurements. It abstracts over different CPU architectures:
-///
-/// - **x86 / x86_64**: Uses the `RDTSC` (Read Time Stamp Counter) instruction.
-/// - **AArch64**: Reads the `CNTVCT_EL0` (Virtual Count Register) via the system register interface.
-///
-/// #### Safety
-/// This function is marked as `unsafe` internally because it uses direct hardware
-/// instructions and inline assembly.
-///
-/// - On x86, the TSC is not strictly guaranteed to be synchronized across multiple cores
-///   or constant across frequency scaling (though it is on most modern "Constant TSC" CPUs).
-/// - In the UEFI environment, which is typically single-threaded, these concerns are minimized.
-///
-/// #### Returns
-/// A 64-bit unsigned integer representing the current hardware tick count.
-fn timer_tick() -> u64 {
-    #[cfg(target_arch = "x86")]
-    unsafe { core::arch::x86::_rdtsc() }
-
-    #[cfg(target_arch = "x86_64")]
-    unsafe { core::arch::x86_64::_rdtsc() }
-
-    #[cfg(target_arch = "aarch64")]
-    unsafe {
-        let ticks: u64;
-        core::arch::asm!("mrs {}, cntvct_el0", out(reg) ticks);
-        ticks
-    }
-}
+use crate::timer_tick;
 
 /// A timing-robust input state machine that operates independently of UEFI protocols.
 ///
@@ -90,13 +59,14 @@ impl StateMachineFallback {
         Self {
             timer_freq: Self::calibrate_ticks() as f64,
 
-            release_timeout: Duration::from_millis(150),
-            long_press_delay: Duration::from_millis(500),
-            click_window: Duration::from_millis(300),
+            release_timeout: Duration::from_millis(get_release_timeout()),
+            long_press_delay: Duration::from_millis(get_long_press_delay()),
+            click_window: Duration::from_millis(get_click_window()),
 
             state: State::Idle,
             event_queue: VecDeque::new(),
         }
+
     }
 
     /// Updates the state machine with the current keyboard input and returns the next pending event.

@@ -8,9 +8,10 @@ use alloc::vec::Vec;
 use core::ffi::c_void;
 use core::hint::spin_loop;
 use core::ptr::NonNull;
-use uefi::boot::{create_event, locate_handle_buffer, open_protocol_exclusive, register_protocol_notify, ScopedProtocol, SearchType};
+use uefi::boot::{check_event, create_event, locate_handle_buffer, open_protocol_exclusive, register_protocol_notify, set_timer, ScopedProtocol, SearchType, TimerTrigger};
 use uefi::{Event, Identify, Result};
 use uefi_raw::table::boot::{EventType, Tpl};
+use crate::config::get_refresh_positive_input_device_time;
 use crate::input::Input;
 
 /// input event notification wrapper
@@ -168,7 +169,25 @@ impl KeyboardHotPlugMonitor {
         Loop: FnMut(usize, &mut ScopedProtocol<Input>) -> Result<Res>,
     {
         let mut keyboards: Vec<ScopedProtocol<Input>> = Vec::new();
+        // Initial device discovery
         Self::refresh_positive(&mut keyboards);
+
+        // --- Timer Setup ---
+        // Create a timer event. In UEFI, timer events are used to signal intervals.
+        let timer_event = unsafe {
+            create_event(
+                EventType::TIMER,
+                Tpl::CALLBACK,
+                None, // No callback function needed, we will poll it
+                None,
+            )?
+        };
+
+
+        set_timer(
+            &timer_event,
+            TimerTrigger::Periodic(get_refresh_positive_input_device_time()),
+        )?;
 
         macro_rules! f {
             ($f:ident) => {
@@ -176,15 +195,20 @@ impl KeyboardHotPlugMonitor {
             };
         }
 
+        // Run initial user-defined init
         f!(init);
         loop {
+            // Perform the main loop tick for every keyboard
+            f!(tick);
             spin_loop();
-            if true {
+
+            // Check if the timer has fired (non-blocking)
+            // check_event returns Ok(()) if signaled, or an Error if not yet signaled.
+            if let Ok(true) = unsafe { check_event(timer_event.unsafe_clone()) } {
                 Self::refresh_positive(&mut keyboards);
+                // Run initial user-defined update
                 f!(update);
             }
-            f!(tick);
-            unimplemented!("TODO: A timer needs to be introduced.")
         }
     }
 }

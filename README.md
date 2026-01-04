@@ -99,7 +99,7 @@ this script is intentionally authored in reverse order for compatibility.
 qemu-system-x86_64 -drive if=pflash,format=raw,file=qemu/OVMF.fd -drive format=raw,file=fat:rw:qemu -m 4G -device usb-ehci -device usb-tablet -smp 4 -cpu max -monitor stdio
 mv -Force .\target\x86_64-unknown-uefi\release\examples\*.efi .\qemu\EFI\BOOT\BOOTX64.EFI
 rm .\qemu\EFI\BOOT\BOOTX64.EFI
-cargo build --example test_state_machine --all-features --release
+cargo build --example test_polling_hotplug --all-features --release
 ```
 
 About Version
