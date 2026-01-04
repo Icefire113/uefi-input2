@@ -92,41 +92,6 @@ use uefi::boot::{get_handle_for_protocol, open_protocol_exclusive, ScopedProtoco
 use uefi::Result;
 use crate::input::Input;
 
-
-/// Reads the high-resolution hardware cycle counter for the current CPU architecture.
-///
-/// This function provides a low-overhead timestamp used for frequency calibration
-/// and duration measurements. It abstracts over different CPU architectures:
-///
-/// - **x86 / x86_64**: Uses the `RDTSC` (Read Time Stamp Counter) instruction.
-/// - **AArch64**: Reads the `CNTVCT_EL0` (Virtual Count Register) via the system register interface.
-///
-/// #### Safety
-/// This function is marked as `unsafe` internally because it uses direct hardware
-/// instructions and inline assembly.
-///
-/// - On x86, the TSC is not strictly guaranteed to be synchronized across multiple cores
-///   or constant across frequency scaling (though it is on most modern "Constant TSC" CPUs).
-/// - In the UEFI environment, which is typically single-threaded, these concerns are minimized.
-///
-/// #### Returns
-/// A 64-bit unsigned integer representing the current hardware tick count.
-fn timer_tick() -> u64 {
-    #[cfg(target_arch = "x86")]
-    unsafe { core::arch::x86::_rdtsc() }
-
-    #[cfg(target_arch = "x86_64")]
-    unsafe { core::arch::x86_64::_rdtsc() }
-
-    #[cfg(target_arch = "aarch64")]
-    unsafe {
-        let ticks: u64;
-        core::arch::asm!("mrs {}, cntvct_el0", out(reg) ticks);
-        ticks
-    }
-}
-
-
 /// it has roughly the same function as `uefi::system::with_stdin`.
 /// only support single keyboard.
 pub fn with_stdin<F, R>(mut f: F) -> Result<R>

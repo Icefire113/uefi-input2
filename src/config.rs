@@ -1,36 +1,62 @@
-use core::sync::atomic::{AtomicU64, Ordering};
+// Copyright (c) Bemly, January 2026
+// You may copy and distribute this file freely.  Any queries and
+// complaints should be forwarded to bemly_@petalmail.com.
+// If you make any changes to this file, please do not distribute
+// the results under the name `bemly'.
 
-///
-static REFRESH_POSITIVE_INPUT_DEVICE_TIME: AtomicU64 = AtomicU64::new(1_0000_0000);
+use core::sync::atomic::AtomicU64;
 
-/// The threshold duration used to determine if a key has been physically released.
-/// Since UEFI might not provide an explicit "release" interrupt, the state machine
-/// considers a key released if no signals are received within this window.
-///
-/// Typical value: 150ms - 200ms.
-static RELEASE_TIMEOUT: AtomicU64 = AtomicU64::new(150);
+macro_rules! config {
+    ($(
+        $(#[$meta:meta])* $name:ident : $default:expr ;
+    )*) => {
+        $(
+            static $name: AtomicU64 = AtomicU64::new($default);
 
-/// The required duration of a continuous press before a `LongPressed` event is triggered.
-/// After this threshold, the state machine will begin emitting `Repeat` events.
-///
-/// Typical value: 500ms.
-static LONG_PRESS_DELAY: AtomicU64 = AtomicU64::new(500);
+            $(#[$meta])*
+            #[allow(non_snake_case)]
+            pub mod $name {
+                use super::*;
+                use core::sync::atomic::Ordering;
 
-/// The maximum time window between a key release and the next press to be
-/// considered a multi-click (e.g., a double click).
-///
-/// Typical value: 250ms - 300ms.
-static CLICK_WINDOW: AtomicU64 = AtomicU64::new(300);
+                /// Gets the current value.
+                pub fn get() -> u64 {
+                    $name.load(Ordering::Relaxed)
+                }
 
-pub fn refresh_positive_input_device_time() -> u64 {
-    REFRESH_POSITIVE_INPUT_DEVICE_TIME.load(Ordering::Relaxed)
+                /// Sets a new value.
+                pub fn set(val: u64) {
+                    $name.store(val, Ordering::Relaxed)
+                }
+            }
+        )*
+    };
 }
-pub fn set_refresh_positive_input_device_time(ns100: u64) {
-    REFRESH_POSITIVE_INPUT_DEVICE_TIME.store(ns100, Ordering::Relaxed)
+
+config! {
+    /// Set timer to trigger every
+    /// UEFI Spec V2.8 SetTimer => step is 100ns (unit)
+    /// You can adjust this interval based on how "hot" you want the plug detection to be.
+    ///
+    /// Typical value: 10s (100000000)
+    REFRESH_POSITIVE_INPUT_DEVICE_TIME: 1_0000_0000;
+
+    /// The threshold duration used to determine if a key has been physically released.
+    /// Since UEFI might not provide an explicit "release" interrupt, the state machine
+    /// considers a key released if no signals are received within this window.
+    ///
+    /// Typical value: 150ms - 200ms.
+    RELEASE_TIMEOUT: 150;
+
+    /// The required duration of a continuous press before a `LongPressed` event is triggered.
+    /// After this threshold, the state machine will begin emitting `Repeat` events.
+    ///
+    /// Typical value: 500ms.
+        LONG_PRESS_DELAY: 500;
+
+    /// The maximum time window between a key release and the next press to be
+    /// considered a multi-click (e.g., a double click).
+    ///
+    /// Typical value: 250ms - 300ms.
+    CLICK_WINDOW: 300;
 }
-pub fn release_timeout() -> u64 { RELEASE_TIMEOUT.load(Ordering::Relaxed) }
-pub fn set_release_timeout(ms: u64) { RELEASE_TIMEOUT.store(ms, Ordering::Relaxed) }
-pub fn long_press_delay() -> u64 { LONG_PRESS_DELAY.load(Ordering::Relaxed) }
-pub fn set_long_press_delay(ms: u64) { LONG_PRESS_DELAY.store(ms, Ordering::Relaxed) }
-pub fn click_window() -> u64 { CLICK_WINDOW.load(Ordering::Relaxed) }
-pub fn set_click_window(ms: u64) { CLICK_WINDOW.store(ms, Ordering::Relaxed) }
