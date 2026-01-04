@@ -4,6 +4,13 @@
 // If you make any changes to this file, please do not distribute
 // the results under the name `bemly'.
 
+//! A high-level input state machine that transforms raw hardware signals into semantic events.
+//!
+//! The `StateMachine` uses a frequency-aware hardware timestamp provider to distinguish
+//! between short presses, long presses, and multi-click sequences. It maintains an
+//! internal event queue to ensure logical event ordering (e.g., ensuring a `Released`
+//! event precedes a `Click` event).
+
 extern crate alloc;
 use alloc::collections::VecDeque;
 use uefi::boot::{get_handle_for_protocol, open_protocol_exclusive, ScopedProtocol};
@@ -82,7 +89,7 @@ pub enum InputEvent {
 
 /// Represents the internal lifecycle stages of a key tracking operation.
 #[derive(Debug)]
-enum State {
+pub(crate) enum State {
     /// No keys are currently being tracked. The system is waiting for an initial press.
     Idle,
 
@@ -124,11 +131,6 @@ enum State {
 }
 
 /// A high-level input state machine that transforms raw hardware signals into semantic events.
-///
-/// The `StateMachine` uses a frequency-aware hardware timestamp provider to distinguish
-/// between short presses, long presses, and multi-click sequences. It maintains an
-/// internal event queue to ensure logical event ordering (e.g., ensuring a `Released`
-/// event precedes a `Click` event).
 pub struct StateMachine {
     /// The hardware timestamp protocol used to fetch high-resolution time ticks.
     /// This is used to calculate durations for timeouts and delays.

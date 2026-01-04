@@ -11,9 +11,26 @@ use uefi::boot::stall;
 use uefi::proto::console::text::Key::Printable;
 use uefi::data_types::chars::NUL_16;
 use crate::key_data::KeyData;
-use crate::state_machine::InputEvent;
+use crate::state_machine::{InputEvent, State};
 
-// 辅助计时函数
+/// Reads the high-resolution hardware cycle counter for the current CPU architecture.
+///
+/// This function provides a low-overhead timestamp used for frequency calibration
+/// and duration measurements. It abstracts over different CPU architectures:
+///
+/// - **x86 / x86_64**: Uses the `RDTSC` (Read Time Stamp Counter) instruction.
+/// - **AArch64**: Reads the `CNTVCT_EL0` (Virtual Count Register) via the system register interface.
+///
+/// #### Safety
+/// This function is marked as `unsafe` internally because it uses direct hardware
+/// instructions and inline assembly.
+///
+/// - On x86, the TSC is not strictly guaranteed to be synchronized across multiple cores
+///   or constant across frequency scaling (though it is on most modern "Constant TSC" CPUs).
+/// - In the UEFI environment, which is typically single-threaded, these concerns are minimized.
+///
+/// #### Returns
+/// A 64-bit unsigned integer representing the current hardware tick count.
 fn timer_tick() -> u64 {
     #[cfg(target_arch = "x86")]
     unsafe { core::arch::x86::_rdtsc() }
@@ -27,23 +44,6 @@ fn timer_tick() -> u64 {
         core::arch::asm!("mrs {}, cntvct_el0", out(reg) ticks);
         ticks
     }
-}
-
-#[derive(Debug)]
-enum State {
-    Idle,
-    Active {
-        key: KeyData,
-        start_tick: u64,
-        last_seen_tick: u64,
-        long_press_triggered: bool,
-        click_count: usize,
-    },
-    Cooldown {
-        key: KeyData,
-        release_tick: u64,
-        click_count: usize,
-    },
 }
 
 /// A timing-robust input state machine that operates independently of UEFI protocols.
@@ -113,7 +113,7 @@ impl StateMachineFallback {
 
         let now_tick = timer_tick();
 
-        // --- 关键修复：提前提取字段，解除对 self 的依赖 ---
+        // extract fields in advance to remove the dependency on self.
         let freq = self.timer_freq;
         let timeout = self.release_timeout;
         let lp_delay = self.long_press_delay;
@@ -128,8 +128,8 @@ impl StateMachineFallback {
 
             State::Active {
                 key,
-                start_tick,
-                last_seen_tick,
+                start_time: start_tick,
+                last_seen_time: last_seen_tick,
                 long_press_triggered,
                 click_count
             } => {
@@ -137,7 +137,6 @@ impl StateMachineFallback {
                     Some(curr) if &curr == key => {
                         *last_seen_tick = now_tick;
 
-                        // 内联计算时长，不再调用 self.duration_between
                         let held_duration = Duration::from_secs_f64(
                             now_tick.saturating_sub(*start_tick) as f64 / freq
                         );
@@ -155,34 +154,30 @@ impl StateMachineFallback {
                                 self.event_queue.push_back(InputEvent::Repeat(*key));
                             }
                         }
-                    }
-
+                    },
                     Some(curr) => {
                         let (k, lp, c) = (*key, *long_press_triggered, *click_count);
                         self.emit_release_and_click(&k, lp, c);
                         self.state = State::Idle;
                         self.enter_active(curr, now_tick, 1);
-                    }
-
-                    // 使用提前提取的 timeout 和 freq
+                    },
                     None if Duration::from_secs_f64(now_tick.saturating_sub(*last_seen_tick) as f64 / freq) > timeout => {
                         let (k, lp, c) = (*key, *long_press_triggered, *click_count);
                         self.emit_release_and_click(&k, lp, c);
 
                         self.state = if !lp {
-                            State::Cooldown { key: k, release_tick: now_tick, click_count: c }
+                            State::Cooldown { key: k, release_time: now_tick, click_count: c }
                         } else {
                             State::Idle
                         }
-                    }
-                    None => {}
+                    },
+                    None => {},
                 }
-            }
+            },
 
             State::Cooldown {
-                key, release_tick, click_count
+                key, release_time: release_tick, click_count
             } => {
-                // 使用提前提取的 window 和 freq
                 let elapsed = Duration::from_secs_f64(
                     now_tick.saturating_sub(*release_tick) as f64 / freq
                 );
@@ -192,29 +187,28 @@ impl StateMachineFallback {
                         let count = *click_count + 1;
                         self.state = State::Idle;
                         self.enter_active(curr, now_tick, count);
-                    }
+                    },
                     Some(curr) => {
                         self.state = State::Idle;
                         return self.update(Some(curr));
-                    }
+                    },
                     None if elapsed > window => {
                         self.state = State::Idle;
-                    }
-                    _ => {}
+                    },
+                    _ => {},
                 }
-            }
+            },
         }
 
         self.event_queue.pop_front()
     }
-
-    /// Transitions the state machine into the `Active` state and queues a `Pressed` event.
-    #[inline]
+    /// Transition the state machine into the `Active` state and record the initial press.
+    #[inline(always)]
     fn enter_active(&mut self, key: KeyData, now_tick: u64, count: usize) {
         self.state = State::Active {
             key,
-            start_tick: now_tick,
-            last_seen_tick: now_tick,
+            start_time: now_tick,
+            last_seen_time: now_tick,
             long_press_triggered: false,
             click_count: count,
         };

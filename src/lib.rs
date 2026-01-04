@@ -56,7 +56,7 @@
 //!                        println!("Exiting...");
 //!                        return Ok(())
 //!                    },
-//!                    _ => {}
+//!                    _ => {},
 //!                }
 //!             }
 //!         }
@@ -102,7 +102,6 @@ where F: FnMut(&mut ScopedProtocol<Input>) -> Result<R> {
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
-
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 #[cfg(feature = "alloc")]
