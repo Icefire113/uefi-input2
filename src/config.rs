@@ -25,8 +25,8 @@ macro_rules! config {
                 }
 
                 /// Sets a new value.
-                pub fn set(val: u64) {
-                    $name.store(val, Ordering::Relaxed)
+                pub fn set(t: u64) {
+                    $name.store(t, Ordering::Relaxed)
                 }
             }
         )*
@@ -52,7 +52,7 @@ config! {
     /// After this threshold, the state machine will begin emitting `Repeat` events.
     ///
     /// Typical value: 500ms.
-        LONG_PRESS_DELAY: 500;
+    LONG_PRESS_DELAY: 500;
 
     /// The maximum time window between a key release and the next press to be
     /// considered a multi-click (e.g., a double click).

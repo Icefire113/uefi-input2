@@ -3,11 +3,12 @@ name = "uefi-input2"
 authors = ["Bemly <bemly_@petalmail.com>"]
 categories = ["embedded", "no-std", "api-bindings"]
 keywords = ["uefi", "efi"]
-version = "36.1.14"
+version = "36.1.16"
 edition = "2024"
 license = "Zed"
 readme = "README.md"
 repository = "https://github.com/Bemly/uefi-input2"
+homepage = "https://github.com/Bemly/uefi-input2"
 description = "rusty wrapper for EFI SIMPLE TEXT INPUT EXTEND PROTOCOL, support shift&toggle state and advanced key events."
 
 [dependencies]
@@ -20,6 +21,7 @@ uefi = { version = "0.36.1", features = ["logger", "alloc", "global_allocator", 
 [features]
 default = []
 alloc = ["uefi/alloc"]
+extend = ["uefi/alloc"]
 
 [package.metadata.docs.rs]
 default-target = "x86_64-unknown-uefi"

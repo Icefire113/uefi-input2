@@ -8,6 +8,7 @@ use uefi::proto::console::text::Key::Printable;
 use uefi_input2::hotplug::KeyboardHotPlugMonitor;
 use uefi_input2::input::Input;
 use uefi_input2::key_data::KeyData;
+use uefi_input2::config::REFRESH_POSITIVE_INPUT_DEVICE_TIME;
 
 #[entry]
 fn main() -> Status {
@@ -40,6 +41,9 @@ fn main() -> Status {
         KeyData::realtime_init(input, true)?;
         Ok(println!("[Keyboard {} update] {:?}", index, input))
     }
+
+    // The delay can be modified before polling mode loop.
+    REFRESH_POSITIVE_INPUT_DEVICE_TIME::set(1_0000_0000);
 
     unsafe {
         KeyboardHotPlugMonitor::polling_mode_loop(on_init, on_update, on_main_loop)

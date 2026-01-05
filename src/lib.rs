@@ -142,6 +142,18 @@ where F: FnMut(&mut Vec<ScopedProtocol<Input>>) -> Result<R> {
     f(&mut keyboards)
 }
 
+#[cfg(feature = "extend")]
+pub fn init_keyboards_protocol() -> Result<Vec<ScopedProtocol<Input>>> {
+    let inputs = find_handles::<Input>()?;
+    let mut keyboards: Vec<ScopedProtocol<Input>> = Vec::with_capacity(inputs.len());
+    for input in inputs {
+        let keyboard = open_protocol_exclusive::<Input>(input)?;
+        keyboards.push(keyboard);
+    }
+
+    Ok(keyboards)
+}
+
 /// only supports a maximum of 8 keyboards.
 #[cfg(not(feature = "alloc"))]
 pub fn with_stdins<F, R>(mut f: F) -> Result<R>

@@ -132,6 +132,15 @@ pub(crate) enum State {
 }
 
 /// A high-level input state machine that transforms raw hardware signals into semantic events.
+///
+/// #### config
+/// The configuration file can be modified
+/// before this [`StateMachine`] is newed by uefi-input2::config::*::set().
+/// for detailed configuration information,
+/// please refer to the member variables of this structure.
+///
+/// support configuration:
+///     [`RELEASE_TIMEOUT::set`], [`LONG_PRESS_DELAY::set`], [`CLICK_WINDOW::set`]
 pub struct StateMachine {
     /// The hardware timestamp protocol used to fetch high-resolution time ticks.
     /// This is used to calculate durations for timeouts and delays.

@@ -161,6 +161,10 @@ impl KeyboardHotPlugMonitor {
     /// KeyboardHotPlugMonitor::polling_mode_loop(f, f, f)?;
     /// ```
     /// More see examples/test_polling_hotplug.rs
+    ///
+    /// #### config
+    /// [`REFRESH_POSITIVE_INPUT_DEVICE_TIME::set`] configuration can be modified
+    /// before this [`KeyboardHotPlugMonitor::polling_mode_loop`] is used.
     pub unsafe fn polling_mode_loop<Init, Update, Loop, Res>
     (mut init: Init, mut update: Update, mut tick: Loop) -> Result<Res>
     where
