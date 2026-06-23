@@ -6,7 +6,7 @@
 
 use core::ffi::c_void;
 use core::ptr::addr_of_mut;
-use uefi::{Event, Result, StatusExt};
+use uefi::{Error, Event, Result, Status, StatusExt};
 use uefi::proto::unsafe_protocol;
 use crate::key_data::KeyData;
 use crate::simple_text_input_ex::{KeyNotifyFunction, KeyToggleState,
@@ -30,7 +30,7 @@ impl Input {
 
     /// non-blocking keyboard read
     #[inline]
-    pub fn read_key_stroke_ex(&mut self) -> Option<KeyData> {
+    pub fn read_key_stroke_ex(&mut self) -> Result<KeyData> {
         let mut raw = RawKeyData::default();
         let this = addr_of_mut!(self.0);
 
@@ -40,7 +40,11 @@ impl Input {
         };
 
         // Convert to Rust high-level type
-        status.is_success().then_some(KeyData::from(raw))
+        if status.is_success() {
+            Ok(KeyData::from(raw))
+        } else {
+            Err(Error::new(status, ()))
+        }
     }
 
     /// Returns an event that is signaled when a key is pressed.
@@ -48,8 +52,8 @@ impl Input {
     /// This allows the caller to wait for input without polling in a busy loop,
     /// or to use it in `wait_for_event` along with other events (like timers).
     #[inline]
-    pub fn wait_for_key_event(&self) -> Option<Event> {
-        unsafe { Event::from_ptr(self.0.wait_for_key_ex) }
+    pub fn wait_for_key_event(&self) -> Result<Event> {
+        unsafe { Event::from_ptr(self.0.wait_for_key_ex) }.ok_or(Error::from(Status::UNSUPPORTED))
     }
 
     /// only set toggle state
