@@ -6,11 +6,25 @@
 
 use core::ffi::c_void;
 use core::ptr::addr_of_mut;
+use uefi::data_types::chars::CharConversionError;
 use uefi::{Error, Event, Result, Status, StatusExt};
 use uefi::proto::unsafe_protocol;
 use crate::key_data::KeyData;
 use crate::simple_text_input_ex::{KeyNotifyFunction, KeyToggleState,
                                   RawKeyData, SimpleTextInputExProtocol, Boolean};
+
+/// Error data from [`Input::read_key_stroke_ex`].
+///
+/// This payload specifies where the error payload came from
+/// either an error from the firmware OR when converting the raw key data
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ReadKeyError {
+    /// Firmware returned a non-success status
+    Status,
+    /// The raw key data could not be converted into a rust `KeyData`
+    /// struct
+    InvalidKeyData(CharConversionError)
+}
 
 /// safety wrapper for SimpleTextInputExProtocol
 #[derive(Debug)]
@@ -30,7 +44,7 @@ impl Input {
 
     /// non-blocking keyboard read
     #[inline]
-    pub fn read_key_stroke_ex(&mut self) -> Result<KeyData> {
+    pub fn read_key_stroke_ex(&mut self) -> Result<KeyData, ReadKeyError> {
         let mut raw = RawKeyData::default();
         let this = addr_of_mut!(self.0);
 
@@ -41,9 +55,10 @@ impl Input {
 
         // Convert to Rust high-level type
         if status.is_success() {
-            Ok(KeyData::from(raw))
+            KeyData::try_from(raw)
+                .map_err(|e| Error::new(Status::INVALID_PARAMETER, ReadKeyError::InvalidKeyData(e)))
         } else {
-            Err(Error::new(status, ()))
+            Err(Error::new(status, ReadKeyError::Status))
         }
     }
 

@@ -23,11 +23,11 @@ fn main() -> Status {
             KeyData::realtime_init(input, true)?;
         }
 
-        let Some(event) = input.wait_for_key_event() else { return Ok(()) };
+        let Ok(event) = input.wait_for_key_event() else { return Ok(()) };
         if !check_event(&event)? { return Ok(()) }
 
         match input.read_key_stroke_ex() {
-            Some(KeyData { key: Printable(c), .. }) => {
+            Ok(KeyData { key: Printable(c), .. }) => {
                 match u16::from(c) {
                     0x20.. => Ok(print!("[{}]{} ", index, c)),
                     _ => Ok(()),

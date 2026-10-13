@@ -13,7 +13,7 @@ use uefi_input2::{config, with_stdins};
 #[entry]
 fn main() -> Status {
     uefi::helpers::init().expect("Failed to init UEFI");
-    
+
     // The delay can be modified before initializing the state machine.
     config::RELEASE_TIMEOUT::set(200);
     // Initialize the state machine
@@ -21,7 +21,12 @@ fn main() -> Status {
 
     with_stdins(|input| {
         for keyboard in input.iter_mut() {
-            let _ = KeyData::realtime_init(keyboard, true);
+            match keyboard {
+                Some(keyboard) => {
+                    let _ = KeyData::realtime_init(keyboard, true);
+                }
+                None => {}
+            };
         }
 
         loop {
@@ -31,6 +36,12 @@ fn main() -> Status {
                 // non-blocking read of current key press
                 // `read_key_stroke_ex` is non-blocking; if no key is pressed,
                 // it will return `NOT_READY`.
+                let keyboard = match keyboard {
+                    Some(keyboard) => keyboard,
+                    None => {
+                        continue;
+                    }
+                };
                 let uefi_key = keyboard.read_key_stroke_ex();
 
                 // update must be called even if current_key_data is None.
@@ -39,10 +50,10 @@ fn main() -> Status {
                 if let Some(event) = sm.update(uefi_key) {
                     // classification
                     let (label, k, count) = match event {
-                        InputEvent::Pressed(k)        => ("pressed", k, None),
-                        InputEvent::Released(k)       => ("released", k, None),
-                        InputEvent::LongPressed(k)    => ("long", k, None),
-                        InputEvent::Repeat(k)         => ("repeat", k, None),
+                        InputEvent::Pressed(k) => ("pressed", k, None),
+                        InputEvent::Released(k) => ("released", k, None),
+                        InputEvent::LongPressed(k) => ("long", k, None),
+                        InputEvent::Repeat(k) => ("repeat", k, None),
                         InputEvent::Click(k, c) => ("click", k, Some(c)),
                     };
 
@@ -55,22 +66,23 @@ fn main() -> Status {
                             } else {
                                 print!("[{} {}]", label, c)
                             }
-                        },
+                        }
                         Special(c) => {
                             if let Some(c_val) = count {
                                 print!("[{} {:?} {}]", label, c, c_val)
                             } else {
                                 print!("[{} {:?}]", label, c)
                             }
-                        },
-                        _ => {},
+                        }
+                        _ => {}
                     }
                 }
             }
         }
 
         Ok(())
-    }).expect("stdin open failed.");
+    })
+    .expect("stdin open failed.");
 
     Status::SUCCESS
 }

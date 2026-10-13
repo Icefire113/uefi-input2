@@ -4,5 +4,4 @@
 /db
 /qemu
 NvVars
-Cargo.lock
 .DS_Store

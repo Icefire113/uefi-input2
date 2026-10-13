@@ -40,7 +40,7 @@ fn main() -> Status {
 
 #[inline]
 fn test_multi_input(keyboard: &mut ScopedProtocol<Input>) -> Result {
-    if let Some(key_data) = keyboard.read_key_stroke_ex() {
+    if let Ok(key_data) = keyboard.read_key_stroke_ex() {
         if key_data.is_realtime_mode() {
             print!("X");
         }

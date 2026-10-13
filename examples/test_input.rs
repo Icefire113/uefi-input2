@@ -18,7 +18,7 @@ fn main() -> Status {
 
     uefi_input2::with_stdin(|input| {
         loop {
-            if let Some(key_data) = input.read_key_stroke_ex() {
+            if let Ok(key_data) = input.read_key_stroke_ex() {
                 if key_data.is_realtime_mode() {
                     print!("X");
                 }

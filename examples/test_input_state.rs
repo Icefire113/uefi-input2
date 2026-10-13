@@ -88,7 +88,7 @@ fn main() -> Status {
                 return Ok(());
             }
             // Read key
-            if let Some(key_data) = input.read_key_stroke_ex() {
+            if let Ok(key_data) = input.read_key_stroke_ex() {
                 print!("   Key pressed: {:?}", key_data.key);
 
                 if key_data.key_state.key_shift_state & SHIFT_STATE_VALID != 0 {

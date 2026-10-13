@@ -4,12 +4,13 @@
 // If you make any changes to this file, please do not distribute
 // the results under the name `bemly'.
 
-use uefi::{Char16, Status, Result};
-use uefi::boot::ScopedProtocol;
-use uefi::proto::console::text::Key;
-use uefi_raw::protocol::console::InputKey;
 use crate::input::Input;
 use crate::simple_text_input_ex::*;
+use uefi::boot::ScopedProtocol;
+use uefi::data_types::chars::CharConversionError;
+use uefi::proto::console::text::Key;
+use uefi::{Char16, Result, Status};
+use uefi_raw::protocol::console::InputKey;
 
 /// height-level key data wrapper
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -40,12 +41,14 @@ impl From<KeyData> for RawKeyData {
 }
 
 /// forward conversion to Rust struct
-impl From<RawKeyData> for KeyData {
-    fn from(raw: RawKeyData) -> Self {
-        Self {
-            key: Key::from(raw.key),
+impl TryFrom<RawKeyData> for KeyData {
+    type Error = CharConversionError;
+
+    fn try_from(raw: RawKeyData) -> core::result::Result<Self, Self::Error> {
+        Ok(Self {
+            key: Key::try_from(raw.key)?,
             key_state: raw.key_state,
-        }
+        })
     }
 }
 
