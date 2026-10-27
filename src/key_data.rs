@@ -71,26 +71,34 @@ impl KeyData {
 
     /// check if the right shift is pressed.
     #[inline(always)]
-    pub fn r_shift(&self) -> bool { (self.key_state.key_shift_state & RIGHT_SHIFT_PRESSED) != 0 }
+    pub fn r_shift(&self) -> bool {
+        (self.key_state.key_shift_state & RIGHT_SHIFT_PRESSED) != 0
+    }
 
     ///  check if the left shift is pressed.
     #[inline(always)]
-    pub fn l_shift(&self) -> bool { (self.key_state.key_shift_state & LEFT_SHIFT_PRESSED) != 0 }
+    pub fn l_shift(&self) -> bool {
+        (self.key_state.key_shift_state & LEFT_SHIFT_PRESSED) != 0
+    }
 
     /// check if any shift is pressed.
     #[inline(always)]
-     pub fn shift(&self) -> bool {
+    pub fn shift(&self) -> bool {
         const SHIFT_MASK: u32 = LEFT_SHIFT_PRESSED | RIGHT_SHIFT_PRESSED;
         (self.key_state.key_shift_state & SHIFT_MASK) != 0
     }
 
     /// check if the right control is pressed.
     #[inline(always)]
-    pub fn r_ctrl(&self) -> bool { (self.key_state.key_shift_state & RIGHT_CONTROL_PRESSED) != 0 }
+    pub fn r_ctrl(&self) -> bool {
+        (self.key_state.key_shift_state & RIGHT_CONTROL_PRESSED) != 0
+    }
 
     /// check if the left control is pressed.
     #[inline(always)]
-    pub fn l_ctrl(&self) -> bool { (self.key_state.key_shift_state & LEFT_CONTROL_PRESSED) != 0 }
+    pub fn l_ctrl(&self) -> bool {
+        (self.key_state.key_shift_state & LEFT_CONTROL_PRESSED) != 0
+    }
 
     /// check if any control is pressed.
     #[inline(always)]
@@ -101,11 +109,15 @@ impl KeyData {
 
     /// check if the right alt is pressed.
     #[inline(always)]
-    pub fn r_alt(&self) -> bool { (self.key_state.key_shift_state & RIGHT_ALT_PRESSED) != 0 }
+    pub fn r_alt(&self) -> bool {
+        (self.key_state.key_shift_state & RIGHT_ALT_PRESSED) != 0
+    }
 
     /// check if the left alt is pressed.
     #[inline(always)]
-    pub fn l_alt(&self) -> bool { (self.key_state.key_shift_state & LEFT_ALT_PRESSED) != 0 }
+    pub fn l_alt(&self) -> bool {
+        (self.key_state.key_shift_state & LEFT_ALT_PRESSED) != 0
+    }
 
     /// check if any alt is pressed.
     #[inline(always)]
@@ -116,11 +128,15 @@ impl KeyData {
 
     /// check if the right logo is pressed.
     #[inline(always)]
-    pub fn r_logo(&self) -> bool { (self.key_state.key_shift_state & RIGHT_LOGO_PRESSED) != 0 }
+    pub fn r_logo(&self) -> bool {
+        (self.key_state.key_shift_state & RIGHT_LOGO_PRESSED) != 0
+    }
 
     /// check if the left logo is pressed.
     #[inline(always)]
-    pub fn l_logo(&self) -> bool { (self.key_state.key_shift_state & LEFT_LOGO_PRESSED) != 0 }
+    pub fn l_logo(&self) -> bool {
+        (self.key_state.key_shift_state & LEFT_LOGO_PRESSED) != 0
+    }
 
     /// check if any logo is pressed.
     #[inline(always)]
@@ -131,11 +147,15 @@ impl KeyData {
 
     /// check if the menu is pressed.
     #[inline(always)]
-    pub fn menu(&self) -> bool { (self.key_state.key_shift_state & MENU_KEY_PRESSED) != 0 }
+    pub fn menu(&self) -> bool {
+        (self.key_state.key_shift_state & MENU_KEY_PRESSED) != 0
+    }
 
     /// check if the sys req is pressed.
     #[inline(always)]
-    pub fn sys_req(&self) -> bool { (self.key_state.key_shift_state & SYS_REQ_PRESSED) != 0 }
+    pub fn sys_req(&self) -> bool {
+        (self.key_state.key_shift_state & SYS_REQ_PRESSED) != 0
+    }
 
     /// check if the toggle state is supported.
     #[inline(always)]
@@ -158,11 +178,15 @@ impl KeyData {
 
     /// check if the num lock is active.
     #[inline(always)]
-    pub fn num_lock(&self) -> bool { (self.key_state.key_toggle_state & NUM_LOCK_ACTIVE) != 0 }
+    pub fn num_lock(&self) -> bool {
+        (self.key_state.key_toggle_state & NUM_LOCK_ACTIVE) != 0
+    }
 
     /// check if the caps lock is active.
     #[inline(always)]
-    pub fn caps_lock(&self) -> bool { (self.key_state.key_toggle_state & CAPS_LOCK_ACTIVE) != 0 }
+    pub fn caps_lock(&self) -> bool {
+        (self.key_state.key_toggle_state & CAPS_LOCK_ACTIVE) != 0
+    }
 
     /// initialize realtime mode.
     ///

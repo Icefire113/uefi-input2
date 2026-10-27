@@ -102,7 +102,7 @@ dependencies = [
 
 [[package]]
 name = "uefi-input2"
-version = "41.0.0"
+version = "41.26.10"
 dependencies = [
  "uefi",
  "uefi-raw",

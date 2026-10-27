@@ -104,10 +104,10 @@ cargo build --example test_polling_hotplug --all-features --release
 
 About Version
 ----------------------------------------------
-Major/Minor semver follows Minor/Patch for uefi-rs crate version.
-Patch semver is for uefi-input2 own version.
-
-such as: uefi-input2 36.1.x <=dependency= uefi-rs 0.36.1
+`41.yy.mm` (e.g. `41.26.10`): major tracks the `uefi` crate generation
+it builds against (`41` == `uefi 0.41 / uefi-raw 0.17`); `yy.mm` is the
+release date. Also monotonic over the legacy `36.1.x` line (`41 > 36`).
+Same-month re-releases have no number left — cut them next month.
 
 License
 ----------------------------------------------
